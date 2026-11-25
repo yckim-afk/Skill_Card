@@ -1,0 +1,3158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>스킬덱 (SkillDeck) — 스킬카드 성장 게임</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <!-- ==================== [1. STYLES / DESIGN SYSTEM] ==================== -->
+  <style>
+    :root {
+      --bg-base: #0d1118;
+      --bg-elevated: #151b26;
+      --bg-card: #1a2230;
+      --bg-card-hover: #212b3c;
+      --bg-input: #111620;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+
+      --text-primary: #eef2f7;
+      --text-secondary: #98a6bc;
+      --text-muted: #64738b;
+
+      --accent-primary: #6366f1;
+      --accent-primary-hover: #7c7ff6;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+
+      /* 성장 분야 컬러 */
+      --dom-world: #38bdf8;
+      --dom-think: #818cf8;
+      --dom-create: #fb7185;
+      --dom-learn: #2dd4bf;
+      --dom-self: #fbbf24;
+
+      /* 카드 상태별 희귀도 */
+      --st-unused: #64748b;
+      --st-unused-bg: rgba(100, 116, 139, 0.14);
+      --st-tried: #10b981;
+      --st-tried-bg: rgba(16, 185, 129, 0.14);
+      --st-repeated: #3b82f6;
+      --st-repeated-bg: rgba(59, 130, 246, 0.16);
+      --st-mastered: #f59e0b;
+      --st-mastered-bg: rgba(245, 158, 11, 0.18);
+
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --nav-height: 70px;
+      --header-height: 64px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.10), transparent 40%),
+        radial-gradient(circle at 85% 10%, rgba(45, 212, 191, 0.07), transparent 35%);
+      color: var(--text-primary);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    a { color: var(--dom-world); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 99px; }
+
+    /* 상단 헤더 */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: var(--header-height);
+      background: rgba(13, 17, 24, 0.86);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #2dd4bf);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    /* 모바일 하단 탭 / 데스크탑 상단 탭 */
+    .app-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      height: var(--nav-height);
+      background: rgba(17, 22, 32, 0.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      padding: 4px 6px env(safe-area-inset-bottom);
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 6px 2px;
+      transition: all 0.18s ease;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .nav-btn svg { width: 21px; height: 21px; stroke-width: 1.9; }
+
+    .nav-btn.active {
+      color: var(--text-primary);
+      background: rgba(99, 102, 241, 0.15);
+    }
+    .nav-btn.active svg { color: #818cf8; }
+
+    .app-main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px 16px calc(var(--nav-height) + 28px);
+    }
+
+    @media (min-width: 900px) {
+      .app-nav {
+        position: sticky;
+        top: var(--header-height);
+        bottom: auto;
+        height: 54px;
+        border-top: none;
+        border-bottom: 1px solid var(--border-subtle);
+        padding: 0 20px;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+      }
+      .nav-btn {
+        flex-direction: row;
+        gap: 7px;
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+      .app-main { padding: 26px 24px 60px; }
+    }
+
+    /* 공통 컴포넌트 */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+    }
+    .panel + .panel { margin-top: 16px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 720px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 680px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 980px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+
+    /* 버튼 (터치하기 쉬운 크기) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      user-select: none;
+    }
+    .btn:hover:not(:disabled) { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.28); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #7477f7, #5b52f0);
+      border-color: transparent;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.28);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: transparent;
+      color: #111827;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.24); }
+
+    .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+    .btn-lg { min-height: 52px; padding: 14px 24px; font-size: 16px; border-radius: var(--radius-md); }
+    .btn-block { width: 100%; }
+
+    /* 입력 폼 */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-control {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: border-color 0.18s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    textarea.form-control { min-height: 84px; resize: vertical; }
+
+    /* 배지 */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+    .badge-status-unused { background: var(--st-unused-bg); color: #cbd5e1; border: 1px solid rgba(100,116,139,0.4); }
+    .badge-status-tried { background: var(--st-tried-bg); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.45); }
+    .badge-status-repeated { background: var(--st-repeated-bg); color: #93c5fd; border: 1px solid rgba(59,130,246,0.5); }
+    .badge-status-mastered { background: var(--st-mastered-bg); color: #fcd34d; border: 1px solid rgba(245,158,11,0.6); }
+
+    /* 진행 바 */
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #6366f1, #2dd4bf);
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* 스킬카드 (상태별 희귀도 테두리) */
+    .skill-card {
+      position: relative;
+      background: linear-gradient(165deg, #1d2636 0%, #141a25 100%);
+      border-radius: 18px;
+      padding: 18px;
+      border: 2px solid var(--st-unused);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .skill-card:hover { transform: translateY(-2px); }
+
+    .skill-card.status-unused { border-color: rgba(100, 116, 139, 0.55); }
+    .skill-card.status-tried {
+      border-color: rgba(16, 185, 129, 0.72);
+      box-shadow: 0 8px 26px rgba(16, 185, 129, 0.13);
+    }
+    .skill-card.status-repeated {
+      border-color: rgba(59, 130, 246, 0.85);
+      box-shadow: 0 8px 28px rgba(59, 130, 246, 0.18);
+    }
+    .skill-card.status-mastered {
+      border-color: #f59e0b;
+      background: linear-gradient(165deg, #27231a 0%, #171a24 65%);
+      box-shadow: 0 10px 32px rgba(245, 158, 11, 0.22);
+    }
+    .skill-card.status-mastered::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      pointer-events: none;
+      background: linear-gradient(125deg, rgba(251, 191, 36, 0.12), transparent 40%, rgba(251, 191, 36, 0.06));
+    }
+
+    .card-top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text-primary);
+    }
+
+    .card-action-box {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid var(--accent-primary);
+      padding: 10px 12px;
+      border-radius: 0 10px 10px 0;
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .card-condition {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.03);
+      padding: 7px 10px;
+      border-radius: 8px;
+    }
+
+    .card-bottom-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: auto;
+    }
+
+    .stars { color: #fbbf24; letter-spacing: 1px; font-size: 13px; }
+
+    /* 3D 카드 뒤집기 (DRAW 연출) */
+    .flip-scene { perspective: 1100px; min-height: 300px; }
+
+    .flip-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 300px;
+      transform-style: preserve-3d;
+      transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .flip-card.is-flipped { transform: rotateY(180deg); }
+
+    .flip-face {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      width: 100%;
+      height: 100%;
+    }
+
+    .flip-face-back {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #1b2234, #101520);
+      border: 2px solid rgba(129, 140, 248, 0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow-card);
+      background-image:
+        radial-gradient(circle at center, rgba(99, 102, 241, 0.16) 0%, transparent 65%),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 10px, transparent 10px 20px);
+    }
+
+    .flip-face-front { transform: rotateY(180deg); height: 100%; }
+
+    /* 카드 뒷면 펼침 영역 */
+    .card-back-drawer {
+      margin-top: 6px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border-strong);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeSlide 0.22s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 필터 칩 */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip {
+      min-height: 36px;
+      padding: 6px 13px;
+      border-radius: 99px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .chip.active { background: var(--accent-primary); border-color: var(--accent-primary); color: #fff; }
+    .chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 최상위 방향 배너 */
+    .north-star-banner {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(45, 212, 191, 0.10));
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    .north-star-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #a5b4fc;
+      margin-bottom: 4px;
+    }
+    .north-star-quote {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    /* 통계 박스 */
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+    .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .stat-value { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+
+    /* 시간 선택 (DRAW) */
+    .time-option-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+    @media (min-width: 640px) { .time-option-grid { grid-template-columns: repeat(3, 1fr); } }
+    .time-card-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 18px 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.16s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .time-card-btn:hover { border-color: rgba(129, 140, 248, 0.7); background: var(--bg-card-hover); }
+    .time-card-btn.selected {
+      border-color: #818cf8;
+      background: rgba(99, 102, 241, 0.18);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* 별점 입력 */
+    .rating-stars { display: flex; gap: 8px; }
+    .star-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-input);
+      font-size: 22px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: grid;
+      place-items: center;
+    }
+    .star-btn.filled {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.6);
+      background: rgba(251, 191, 36, 0.12);
+    }
+
+    /* 정산 연출 */
+    .settlement-hero {
+      text-align: center;
+      padding: 28px 18px;
+      background: radial-gradient(circle at top, rgba(99, 102, 241, 0.25), rgba(16, 185, 129, 0.08) 60%, transparent);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: var(--radius-lg);
+      animation: popIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .xp-pop {
+      font-size: 38px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #a5b4fc, #5eead4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 6px 0;
+    }
+
+    /* 타이머 */
+    .timer-display {
+      font-variant-numeric: tabular-nums;
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-align: center;
+      margin: 10px 0;
+      color: #e2e8f0;
+    }
+
+    /* 모달 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(5, 8, 14, 0.78);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      animation: fadeSlide 0.2s ease;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .icon-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* 등급 배지 */
+    .grade-badge {
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .grade-S { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #111827; box-shadow: 0 0 25px rgba(245, 158, 11, 0.45); }
+    .grade-A { background: linear-gradient(135deg, #818cf8, #6366f1); color: #fff; box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+    .grade-B { background: linear-gradient(135deg, #34d399, #10b981); color: #052e16; }
+    .grade-C { background: linear-gradient(135deg, #94a3b8, #64748b); color: #0f172a; }
+
+    /* 토스트 */
+    .toast-container {
+      position: fixed;
+      top: 76px;
+      right: 16px;
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: #1e293b;
+      border: 1px solid rgba(129, 140, 248, 0.5);
+      color: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      animation: fadeSlide 0.2s ease;
+    }
+
+    /* 빈 상태 */
+    .empty-state {
+      text-align: center;
+      padding: 42px 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+    }
+    .empty-state-icon { font-size: 40px; margin-bottom: 10px; }
+
+    /* 28일 활동 */
+    .activity-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .activity-cell {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      position: relative;
+    }
+    .activity-cell.lvl-1 { background: rgba(99, 102, 241, 0.28); color: #e0e7ff; border-color: rgba(99,102,241,0.45); }
+    .activity-cell.lvl-2 { background: rgba(99, 102, 241, 0.55); color: #fff; border-color: rgba(129,140,248,0.7); }
+    .activity-cell.lvl-3 { background: linear-gradient(135deg, #6366f1, #2dd4bf); color: #fff; font-weight: 700; border-color: transparent; }
+    .activity-cell.is-today { outline: 2px solid #fbbf24; outline-offset: 1px; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== [2. APP SHELL & NAVIGATION] ==================== -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo">SD</div>
+      <div class="brand-text">
+        <h1>스킬덱 SkillDeck</h1>
+        <span id="headerTitleBadge">Lv.1 · 탐구자</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm" id="btnOpenSettings" aria-label="설정 및 백업">⚙️ 설정 / 백업</button>
+    </div>
+  </header>
+
+  <nav class="app-nav" aria-label="메인 메뉴">
+    <button class="nav-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      <span>HOME</span>
+    </button>
+    <button class="nav-btn" data-tab="draw">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="12" height="16" rx="2"/><path d="M8 4V2.5A1.5 1.5 0 0 1 9.5 1h9A1.5 1.5 0 0 1 20 2.5v13a1.5 1.5 0 0 1-1.5 1.5H16"/><path d="M10 10l2 2-2 2-2-2z"/></svg>
+      <span>DRAW</span>
+    </button>
+    <button class="nav-btn" data-tab="cardbook">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>CARD BOOK</span>
+    </button>
+    <button class="nav-btn" data-tab="growth">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 21 8.5 17.5 20 6.5 20 3 8.5"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>GROWTH</span>
+    </button>
+    <button class="nav-btn" data-tab="chapter">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <span>CHAPTER</span>
+    </button>
+    <button class="nav-btn" data-tab="strategy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg>
+      <span>STRATEGY</span>
+    </button>
+  </nav>
+
+  <main class="app-main" id="appMain"></main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ==================== [3. MODALS] ==================== -->
+  <!-- 설정 / 백업 -->
+  <div class="modal-backdrop" id="modalSettings">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚙️ 설정 및 데이터 백업</h3>
+        <button class="icon-close" onclick="closeModal('modalSettings')">✕</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="panel" style="padding:16px;">
+          <h4 style="margin:0 0 6px;">데이터 내보내기 (JSON 다운로드)</h4>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary);">
+            현재까지 모은 스킬카드, 후기 기록, 챕터 진행도, 공략 데이터를 JSON 파일로 저장합니다.
+          </p>
+          <button class="btn btn-primary btn-block" onclick="exportData()">📥 JSON 파일 다운로드</button>
+        </div>
+
+        <div class="panel" style="padding:16px;">
+          <h4 style="margin:0 0 6px;">데이터 가져오기 (JSON 업로드)</h4>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary);">
+            백업해 둔 JSON 파일을 불러와 복원합니다. 현재 데이터는 덮어써집니다.
+          </p>
+          <input type="file" id="importFileInput" accept=".json,application/json" class="form-control" style="margin-bottom:10px;" />
+          <button class="btn btn-block" onclick="importData()">📤 선택한 파일로 복원</button>
+        </div>
+
+        <div class="panel" style="padding:16px; border-color: rgba(239,68,68,0.3);">
+          <h4 style="margin:0 0 6px; color:#fca5a5;">초기화</h4>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary);">
+            모든 데이터를 지우고 초기 샘플 카드 상태로 되돌립니다.
+          </p>
+          <button class="btn btn-danger btn-block" onclick="resetAllData()">🗑️ 전체 데이터 초기화</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 카드 추가/수정 -->
+  <div class="modal-backdrop" id="modalCardForm">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="cardFormTitle">✨ 새 스킬카드 추가</h3>
+        <button class="icon-close" onclick="closeModal('modalCardForm')">✕</button>
+      </div>
+      <form id="cardForm" onsubmit="saveCardForm(event)">
+        <input type="hidden" id="cfId" />
+        <div class="form-group">
+          <label class="form-label">제목 *</label>
+          <input type="text" id="cfTitle" class="form-control" required placeholder="예: 슬로싱킹" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">행동 (한 줄, 하나의 행동 단위) *</label>
+          <input type="text" id="cfAction" class="form-control" required placeholder="예: 한 주제를 30분간 생각한 뒤 글로 정리한다" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">조건 (선택)</label>
+          <input type="text" id="cfCondition" class="form-control" placeholder="예: 스마트폰 멀리 두기, 결과에 집착하지 않기" />
+        </div>
+        <div class="grid-2" style="gap:12px;">
+          <div class="form-group">
+            <label class="form-label">성장 분야 *</label>
+            <select id="cfDomain" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">예상 소요시간 (분) *</label>
+            <input type="number" id="cfDuration" class="form-control" min="1" max="720" value="30" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">난이도 (★1~5) *</label>
+          <select id="cfDifficulty" class="form-control" required>
+            <option value="1">★☆☆☆☆ (1 - 매우 쉬움)</option>
+            <option value="2" selected>★★☆☆☆ (2 - 쉬움)</option>
+            <option value="3">★★★☆☆ (3 - 보통)</option>
+            <option value="4">★★★★☆ (4 - 어려움)</option>
+            <option value="5">★★★★★ (5 - 매우 어려움)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">원본 링크 (선택)</label>
+          <input type="url" id="cfSourceUrl" class="form-control" placeholder="https://..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">요약 / 메모 (선택)</label>
+          <textarea id="cfSummary" class="form-control" placeholder="이 스킬을 왜 모았는지, 핵심 포인트 등을 적어두세요."></textarea>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn" onclick="closeModal('modalCardForm')">취소</button>
+          <button type="submit" class="btn btn-primary">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 보관함으로 이동 -->
+  <div class="modal-backdrop" id="modalArchive">
+    <div class="modal-box" style="max-width:460px;">
+      <div class="modal-header">
+        <h3>📦 보관함으로 이동</h3>
+        <button class="icon-close" onclick="closeModal('modalArchive')">✕</button>
+      </div>
+      <form onsubmit="confirmArchiveCard(event)">
+        <input type="hidden" id="archiveCardId" />
+        <p style="margin:0 0 12px; font-size:13.5px; color:var(--text-secondary);">
+          보관함으로 보낸 카드는 드로우 풀에서 제외되며, 언제든 다시 복원할 수 있습니다.
+        </p>
+        <div class="form-group">
+          <label class="form-label">보관함으로 보내는 이유 *</label>
+          <input type="text" id="archiveReasonInput" class="form-control" required placeholder="예: 현재 상황에 맞지 않음 / 더 좋은 카드로 대체" />
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" class="btn" onclick="closeModal('modalArchive')">취소</button>
+          <button type="submit" class="btn btn-danger">보관함으로 보내기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 공략 -> 카드로 변환 -->
+  <div class="modal-backdrop" id="modalConvertStrategy">
+    <div class="modal-box" style="max-width:680px;">
+      <div class="modal-header">
+        <h3>🃏 공략을 스킬카드로 변환</h3>
+        <button class="icon-close" onclick="closeModal('modalConvertStrategy')">✕</button>
+      </div>
+      <div id="convertStrategyHeader" style="margin-bottom:14px;"></div>
+      <div id="convertCardRows" style="display:flex; flex-direction:column; gap:12px;"></div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin-top:16px;">
+        <button type="button" class="btn" onclick="addConvertRow()">+ 행동 카드 1장 더 쪼개기</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn" onclick="closeModal('modalConvertStrategy')">취소</button>
+          <button type="button" class="btn btn-primary" onclick="submitConvertStrategy()">모두 카드로 생성</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 주간 정산 -->
+  <div class="modal-backdrop" id="modalSettlement">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🏆 챕터 주간 정산</h3>
+        <button class="icon-close" onclick="closeModal('modalSettlement')">✕</button>
+      </div>
+      <div id="modalSettlementBody"></div>
+    </div>
+  </div>
+
+  <!-- ==================== [4. JAVASCRIPT: CONFIG & CONSTANTS] ==================== -->
+  <script>
+    const STORAGE_KEY = 'skilldeck_app_state_v1';
+
+    const NORTH_STAR = '세상을 정확하게 이해하고, 자신의 생각으로 판단하며, 아름다운 것을 만들어내는 사람';
+
+    const DOMAINS = [
+      { id: 'world', name: '세상 이해', color: '#38bdf8', desc: '복잡한 현상과 시스템 이해' },
+      { id: 'think', name: '사고와 추론', color: '#818cf8', desc: '정확하게 생각하고 문제 해결' },
+      { id: 'create', name: '창작', color: '#fb7185', desc: '새로운 것을 구상하고 표현' },
+      { id: 'learn', name: '학습', color: '#2dd4bf', desc: '지식을 효율적으로 습득하고 활용' },
+      { id: 'self', name: '자기 이해', color: '#fbbf24', desc: '자신의 상태와 사고방식 관찰' }
+    ];
+
+    const STATUS_META = {
+      unused:   { label: '미사용', rarity: '노멀', class: 'status-unused', badge: 'badge-status-unused', desc: '0회 적용' },
+      tried:    { label: '시도',   rarity: '언커먼', class: 'status-tried', badge: 'badge-status-tried', desc: '1회 이상' },
+      repeated: { label: '반복',   rarity: '레어', class: 'status-repeated', badge: 'badge-status-repeated', desc: '3회 이상' },
+      mastered: { label: '숙달',   rarity: '레전더리', class: 'status-mastered', badge: 'badge-status-mastered', desc: '능숙 확정' }
+    };
+
+    const CHAPTER_TITLES = [
+      '탐구자',
+      '첫 걸음의 수집가',
+      '꾸준한 실천가',
+      '사유의 항해자',
+      '균형의 장인',
+      '지식의 연금술사',
+      '통찰의 건축가',
+      '자신의 주인'
+    ];
+
+    // ==================== [5. JAVASCRIPT: STATE & STORAGE] ====================
+    function getLocalDateKey(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function uid(prefix = 'id') {
+      return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    function createInitialState() {
+      const todayKey = getLocalDateKey();
+      return {
+        version: 1,
+        cards: [
+          {
+            id: uid('card'),
+            title: '슬로싱킹',
+            action: '편안한 자세로 한 주제를 놓치지 않고 30분간 생각한 뒤, 그 생각을 글로 정리한다',
+            condition: '결과에 집착하지 않기, 몸과 마음은 이완하되 생각의 끈은 놓지 않기',
+            duration: 30,
+            domain: '사고와 추론',
+            difficulty: 2,
+            sourceUrl: '',
+            summary: '초기 제공 샘플 카드. 서두르지 않고 깊은 사유의 끈을 붙잡는 훈련.',
+            status: 'unused',
+            applyCount: 0,
+            reviews: [],
+            archived: false,
+            archiveReason: '',
+            createdAt: Date.now()
+          }
+        ],
+        domainXp: {
+          '세상 이해': 0,
+          '사고와 추론': 0,
+          '창작': 0,
+          '학습': 0,
+          '자기 이해': 0
+        },
+        logs: [], // { id, dateKey, timestamp, chapterNumber, cardId, cardTitle, domain, xpEarned, rating, prevStatus, newStatus }
+        chapter: {
+          number: 1,
+          startDateKey: todayKey,
+          realReward: '',
+          drawCount: 3,
+          maxRerolls: 1,
+          unlockedTitles: ['탐구자'],
+          equippedTitle: '탐구자',
+          seasonThemeDomain: null,
+          seasonThemeBlock: 0,
+          pastSettlements: []
+        },
+        strategies: [], // { id, title, sourceUrl, summary, domain, createdAt }
+        activeRound: {
+          step: 'idle', // 'idle' | 'picking' | 'applying' | 'review' | 'settlement'
+          timeBudget: '30m', // '30m' | '1-2h' | 'allday'
+          candidates: [],
+          flippedIds: [],
+          rerollsLeft: 1,
+          selectedCardId: null,
+          timerRunning: false,
+          timerElapsedSec: 0,
+          timerLastStartedAt: null,
+          lastSettlement: null
+        },
+        ui: {
+          currentTab: 'home',
+          cardbookView: 'active', // 'active' | 'archived'
+          cardbookStatus: 'all',
+          cardbookDomain: 'all',
+          cardbookSearch: '',
+          expandedCardIds: {}
+        }
+      };
+    }
+
+    let storageWarned = false;
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          const init = createInitialState();
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(init)); } catch (e) {}
+          return init;
+        }
+        return normalizeState(JSON.parse(raw));
+      } catch (e) {
+        console.error('Failed to load state:', e);
+        return createInitialState();
+      }
+    }
+
+    function normalizeState(parsed) {
+      const base = createInitialState();
+      const merged = {
+        ...base,
+        ...parsed,
+        domainXp: { ...base.domainXp, ...(parsed.domainXp || {}) },
+        chapter: { ...base.chapter, ...(parsed.chapter || {}) },
+        activeRound: { ...base.activeRound, ...(parsed.activeRound || {}) },
+        ui: { ...base.ui, ...(parsed.ui || {}) }
+      };
+      if (!Array.isArray(parsed.cards)) merged.cards = base.cards;
+      if (!Array.isArray(parsed.logs)) merged.logs = [];
+      if (!Array.isArray(parsed.strategies)) merged.strategies = [];
+      return merged;
+    }
+
+    // 저장소가 막힌 환경(시크릿 모드, 일부 미리보기 등)에서도 앱이 멈추지 않도록 보호
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        if (!storageWarned) {
+          storageWarned = true;
+          showToast('⚠️ 브라우저 저장소를 쓸 수 없어 데이터가 저장되지 않습니다. 설정에서 JSON 백업을 이용하세요.');
+        }
+      }
+    }
+
+    // ==================== [6. JAVASCRIPT: GAME LOGIC & WEIGHTED DRAW] ====================
+    function getTotalXp() {
+      return Object.values(state.domainXp).reduce((a, b) => a + b, 0);
+    }
+
+    function getLevelInfo(totalXp) {
+      // Lv.1->2 = 60 XP, 이후 레벨당 필요량 +25
+      let level = 1;
+      let remaining = totalXp;
+      let needed = 60;
+      while (remaining >= needed) {
+        remaining -= needed;
+        level += 1;
+        needed = 60 + (level - 1) * 25;
+      }
+      return {
+        level,
+        currentLevelXp: remaining,
+        nextLevelXp: needed,
+        percent: Math.min(100, Math.round((remaining / needed) * 100))
+      };
+    }
+
+    function getChapterTargetRounds(chapterNum) {
+      return Math.min(14, 4 + chapterNum);
+    }
+
+    function getCurrentSeasonBlock() {
+      return Math.floor((state.chapter.number - 1) / 4) + 1;
+    }
+
+    function getActiveSeasonDomain() {
+      return state.chapter.seasonThemeDomain || null;
+    }
+
+    function needsSeasonThemeSelection() {
+      return state.chapter.seasonThemeBlock !== getCurrentSeasonBlock() || !state.chapter.seasonThemeDomain;
+    }
+
+    function getDaysSince(dateKey) {
+      const [y, m, d] = dateKey.split('-').map(Number);
+      const start = new Date(y, m - 1, d);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return Math.floor((today - start) / 86400000);
+    }
+
+    function getCardWeight(card, timeBudget) {
+      let weight = 1.0;
+
+      // 1) 시간대 가중치
+      const dur = Number(card.duration) || 30;
+      if (timeBudget === '30m') {
+        weight *= dur <= 40 ? 2.6 : (dur <= 60 ? 1.0 : 0.35);
+      } else if (timeBudget === '1-2h') {
+        weight *= (dur >= 35 && dur <= 130) ? 2.5 : (dur < 35 ? 1.1 : 0.5);
+      } else {
+        weight *= dur >= 90 ? 2.2 : 1.0;
+      }
+
+      // 2) 시즌 테마 분야 우대
+      const seasonDomain = getActiveSeasonDomain();
+      if (seasonDomain && card.domain === seasonDomain) {
+        weight *= 2.0;
+      }
+
+      // 3) 상태 가중치 (미사용 소폭 우대, 숙달 소폭 감소)
+      if (card.status === 'unused') weight *= 1.4;
+      else if (card.status === 'mastered') weight *= 0.55;
+
+      // 4) 챕터가 오를수록 고난이도 카드 비중 증가 (챕터1은 ★1~2 위주)
+      const ch = state.chapter.number;
+      const diff = Number(card.difficulty) || 2;
+      const progression = Math.min(1, (ch - 1) / 6);
+
+      if (diff <= 2) {
+        weight *= (2.4 - 1.3 * progression);
+      } else if (diff === 3) {
+        weight *= (1.0 + 0.35 * progression);
+      } else {
+        weight *= (0.22 + 2.1 * progression);
+      }
+
+      return Math.max(0.05, weight);
+    }
+
+    function weightedPickCandidates(pool, count, timeBudget, avoidIds = []) {
+      let working = [...pool];
+      const chosen = [];
+
+      // 리롤 시 기존 후보를 우선 제외 (풀이 충분할 때)
+      const freshPool = working.filter(c => !avoidIds.includes(c.id));
+      if (freshPool.length >= Math.min(count, working.length)) {
+        working = freshPool;
+      }
+
+      const target = Math.min(count, working.length);
+      for (let i = 0; i < target; i++) {
+        const weights = working.map(c => getCardWeight(c, timeBudget));
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * total;
+        let idx = working.length - 1;
+        for (let j = 0; j < weights.length; j++) {
+          r -= weights[j];
+          if (r <= 0) {
+            idx = j;
+            break;
+          }
+        }
+        chosen.push(working[idx]);
+        working.splice(idx, 1);
+      }
+      return chosen;
+    }
+
+    function getChapterStats(chapterNum) {
+      const logs = state.logs.filter(l => l.chapterNumber === chapterNum);
+      const rounds = logs.length;
+      const xp = logs.reduce((s, l) => s + l.xpEarned, 0);
+      const newlyTriedSet = new Set(logs.filter(l => l.prevStatus === 'unused').map(l => l.cardId));
+      const promotedCount = logs.filter(l => l.prevStatus !== l.newStatus).length;
+
+      const domainCounts = {};
+      DOMAINS.forEach(d => domainCounts[d.name] = 0);
+      logs.forEach(l => {
+        if (domainCounts[l.domain] !== undefined) domainCounts[l.domain]++;
+      });
+
+      const activeDomains = Object.values(domainCounts).filter(c => c > 0).length;
+      const targetRounds = getChapterTargetRounds(chapterNum);
+      const ratio = rounds / targetRounds;
+
+      let grade = 'C';
+      if (ratio >= 1 && activeDomains >= 3) grade = 'S';
+      else if (ratio >= 1 || (ratio >= 0.8 && activeDomains >= 2)) grade = 'A';
+      else if (ratio >= 0.5) grade = 'B';
+
+      return {
+        chapterNum,
+        rounds,
+        targetRounds,
+        xp,
+        newlyTriedCount: newlyTriedSet.size,
+        promotedCount,
+        domainCounts,
+        activeDomains,
+        grade,
+        goalAchieved: rounds >= targetRounds
+      };
+    }
+
+    function getTodayStats() {
+      const todayKey = getLocalDateKey();
+      const todayLogs = state.logs.filter(l => l.dateKey === todayKey);
+      return {
+        rounds: todayLogs.length,
+        xp: todayLogs.reduce((s, l) => s + l.xpEarned, 0)
+      };
+    }
+
+    function getLowestXpDomain() {
+      let lowest = DOMAINS[0].name;
+      let minVal = Infinity;
+      DOMAINS.forEach(d => {
+        const val = state.domainXp[d.name] || 0;
+        if (val < minVal) {
+          minVal = val;
+          lowest = d.name;
+        }
+      });
+      return { domain: lowest, xp: minVal };
+    }
+
+    // ==================== [7. JAVASCRIPT: CHARTS (SVG RADAR & ACTIVITY)] ====================
+    function renderRadarChartSVG() {
+      const size = 320;
+      const cx = size / 2;
+      const cy = size / 2 + 6;
+      const radius = 104;
+      const values = DOMAINS.map(d => state.domainXp[d.name] || 0);
+      const maxVal = Math.max(50, ...values);
+
+      const angleStep = (Math.PI * 2) / 5;
+      const startAngle = -Math.PI / 2;
+
+      function getPoint(idx, ratio) {
+        const angle = startAngle + idx * angleStep;
+        return {
+          x: cx + Math.cos(angle) * radius * ratio,
+          y: cy + Math.sin(angle) * radius * ratio
+        };
+      }
+
+      const rings = [0.25, 0.5, 0.75, 1.0].map(r => {
+        const pts = DOMAINS.map((_, i) => {
+          const p = getPoint(i, r);
+          return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+        }).join(' ');
+        return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1" />`;
+      }).join('');
+
+      const axes = DOMAINS.map((_, i) => {
+        const p = getPoint(i, 1);
+        return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="rgba(255,255,255,0.12)" stroke-width="1" />`;
+      }).join('');
+
+      const dataPts = values.map((v, i) => {
+        const ratio = Math.max(0.08, v / maxVal);
+        const p = getPoint(i, ratio);
+        return { ...p, v, domain: DOMAINS[i] };
+      });
+      const polyStr = dataPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+      const dots = dataPts.map(p =>
+        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${p.domain.color}" stroke="#0d1118" stroke-width="2" />`
+      ).join('');
+
+      const labels = DOMAINS.map((d, i) => {
+        const p = getPoint(i, 1.27);
+        const anchor = Math.abs(p.x - cx) < 15 ? 'middle' : (p.x > cx ? 'start' : 'end');
+        return `
+          <text x="${p.x.toFixed(1)}" y="${(p.y - 4).toFixed(1)}" text-anchor="${anchor}" fill="${d.color}" font-size="12" font-weight="700">${d.name}</text>
+          <text x="${p.x.toFixed(1)}" y="${(p.y + 11).toFixed(1)}" text-anchor="${anchor}" fill="#98a6bc" font-size="11">${values[i]} XP</text>
+        `;
+      }).join('');
+
+      return `
+        <svg viewBox="0 0 ${size} ${size}" style="width:100%; max-width:340px; height:auto; display:block; margin:0 auto;">
+          <defs>
+            <linearGradient id="radarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgba(99, 102, 241, 0.55)" />
+              <stop offset="100%" stop-color="rgba(45, 212, 191, 0.45)" />
+            </linearGradient>
+          </defs>
+          ${rings}
+          ${axes}
+          <polygon points="${polyStr}" fill="url(#radarGrad)" stroke="#818cf8" stroke-width="2.2" />
+          ${dots}
+          ${labels}
+        </svg>
+      `;
+    }
+
+    function renderActivity28Days() {
+      const today = new Date();
+      const cells = [];
+      const countByDay = {};
+      const xpByDay = {};
+
+      state.logs.forEach(l => {
+        countByDay[l.dateKey] = (countByDay[l.dateKey] || 0) + 1;
+        xpByDay[l.dateKey] = (xpByDay[l.dateKey] || 0) + l.xpEarned;
+      });
+
+      for (let i = 27; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const key = getLocalDateKey(d);
+        const cnt = countByDay[key] || 0;
+        const xp = xpByDay[key] || 0;
+        let lvl = '';
+        if (cnt === 1) lvl = 'lvl-1';
+        else if (cnt === 2) lvl = 'lvl-2';
+        else if (cnt >= 3) lvl = 'lvl-3';
+        const isToday = i === 0 ? 'is-today' : '';
+        cells.push(`
+          <div class="activity-cell ${lvl} ${isToday}" title="${key}: ${cnt}라운드 (${xp} XP)">
+            <span>${d.getDate()}</span>
+            ${cnt > 0 ? `<span style="font-size:9px; opacity:0.9;">${cnt}회</span>` : ''}
+          </div>
+        `);
+      }
+
+      return `
+        <div class="activity-grid">${cells.join('')}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--text-muted);">
+          <span>28일 전</span>
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span>적음</span>
+            <span style="width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.06);display:inline-block;"></span>
+            <span style="width:12px;height:12px;border-radius:3px;background:rgba(99,102,241,0.3);display:inline-block;"></span>
+            <span style="width:12px;height:12px;border-radius:3px;background:rgba(99,102,241,0.6);display:inline-block;"></span>
+            <span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#6366f1,#2dd4bf);display:inline-block;"></span>
+            <span>많음</span>
+          </div>
+          <span>오늘</span>
+        </div>
+      `;
+    }
+
+    // ==================== [8. JAVASCRIPT: RENDERERS (6 TABS)] ====================
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function safeUrl(url) {
+      if (!url) return '';
+      const trimmed = url.trim();
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return '';
+    }
+
+    function getDomainMeta(domainName) {
+      return DOMAINS.find(d => d.name === domainName) || DOMAINS[0];
+    }
+
+    function renderStars(n) {
+      const count = Math.max(1, Math.min(5, Number(n) || 1));
+      return '★'.repeat(count) + '<span style="opacity:0.25;">' + '★'.repeat(5 - count) + '</span>';
+    }
+
+    function renderSkillCardInner(card, options = {}) {
+      const st = STATUS_META[card.status] || STATUS_META.unused;
+      const dom = getDomainMeta(card.domain);
+      const isExpanded = !!state.ui.expandedCardIds[card.id];
+      const showExpandBtn = options.showExpandBtn !== false;
+      const safeLink = safeUrl(card.sourceUrl);
+      const reviews = [...(card.reviews || [])].sort((a, b) => a.timestamp - b.timestamp);
+
+      return `
+        <div class="card-top-meta">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="badge" style="background:${dom.color}22; color:${dom.color}; border:1px solid ${dom.color}55;">
+              ${escapeHtml(dom.name)}
+            </span>
+            <span class="badge ${st.badge}">${st.label} · ${st.rarity}</span>
+          </div>
+          <span style="font-size:12px; color:var(--text-secondary);">적용 ${card.applyCount}회</span>
+        </div>
+
+        <h4 class="card-title">${escapeHtml(card.title)}</h4>
+
+        <div class="card-action-box">${escapeHtml(card.action)}</div>
+
+        ${card.condition ? `<div class="card-condition"><strong>조건:</strong> ${escapeHtml(card.condition)}</div>` : ''}
+
+        <div class="card-bottom-meta">
+          <span>⏱ ${card.duration}분</span>
+          <span class="stars" title="난이도 ${card.difficulty}">${renderStars(card.difficulty)}</span>
+        </div>
+
+        ${options.extraFooterHtml || ''}
+
+        ${showExpandBtn ? `
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
+            <button class="btn btn-sm" style="flex:1;" onclick="toggleCardBack('${card.id}')">
+              ${isExpanded ? '▲ 앞면만 보기' : '▼ 뒷면 펼치기 (메모·후기 ' + reviews.length + ')'}
+            </button>
+          </div>
+        ` : ''}
+
+        ${isExpanded && showExpandBtn ? `
+          <div class="card-back-drawer">
+            ${card.summary ? `
+              <div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:2px;">요약 / 메모</div>
+                <div style="color:var(--text-primary); white-space:pre-line;">${escapeHtml(card.summary)}</div>
+              </div>
+            ` : ''}
+
+            <div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:2px;">원본 링크</div>
+              ${safeLink
+                ? `<a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" style="word-break:break-all;">🔗 ${escapeHtml(safeLink)}</a>`
+                : `<span style="color:var(--text-muted);">등록된 링크 없음</span>`}
+            </div>
+
+            <div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:6px;">후기 기록 (${reviews.length}건 · 시간순)</div>
+              ${reviews.length === 0
+                ? `<div style="color:var(--text-muted); font-size:12.5px;">아직 적용 후기가 없습니다.</div>`
+                : `<div style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
+                    ${reviews.map(r => `
+                      <div style="background:rgba(255,255,255,0.04); padding:8px 10px; border-radius:8px; border:1px solid var(--border-subtle);">
+                        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); margin-bottom:3px;">
+                          <span>${escapeHtml(r.date)}</span>
+                          <span class="stars">${renderStars(r.rating)}</span>
+                        </div>
+                        <div style="font-size:13px; color:var(--text-primary); white-space:pre-line;">${escapeHtml(r.text || '(코멘트 없음)')}</div>
+                      </div>
+                    `).join('')}
+                  </div>`
+              }
+            </div>
+
+            ${options.backActionsHtml ? options.backActionsHtml(card) : ''}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function renderApp() {
+      const totalXp = getTotalXp();
+      const lvl = getLevelInfo(totalXp);
+      document.getElementById('headerTitleBadge').textContent =
+        `Lv.${lvl.level} · ${state.chapter.equippedTitle || '탐구자'} (${totalXp} XP)`;
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === state.ui.currentTab);
+      });
+
+      const main = document.getElementById('appMain');
+      switch (state.ui.currentTab) {
+        case 'home': main.innerHTML = renderHomeTab(); break;
+        case 'draw': main.innerHTML = renderDrawTab(); break;
+        case 'cardbook': main.innerHTML = renderCardBookTab(); break;
+        case 'growth': main.innerHTML = renderGrowthTab(); break;
+        case 'chapter': main.innerHTML = renderChapterTab(); break;
+        case 'strategy': main.innerHTML = renderStrategyTab(); break;
+      }
+    }
+
+    // ---------- 1. HOME TAB ----------
+    function renderHomeTab() {
+      const today = getTodayStats();
+      const totalXp = getTotalXp();
+      const lvl = getLevelInfo(totalXp);
+      const chStats = getChapterStats(state.chapter.number);
+      const chPct = Math.min(100, Math.round((chStats.rounds / chStats.targetRounds) * 100));
+      const activeCards = state.cards.filter(c => !c.archived);
+      const hasOngoingRound = ['picking', 'applying', 'review'].includes(state.activeRound.step);
+
+      return `
+        <div class="north-star-banner">
+          <div class="north-star-label">최상위 성장 방향</div>
+          <p class="north-star-quote">“${NORTH_STAR}”</p>
+        </div>
+
+        ${activeCards.length === 0 ? `
+          <div class="empty-state" style="margin-bottom:18px;">
+            <div class="empty-state-icon">🃏</div>
+            <h3 style="margin:0 0 8px; color:var(--text-primary);">활성화된 스킬카드가 없습니다</h3>
+            <p style="margin:0 0 16px;">카드북에서 나만의 성장 팁을 카드로 추가하고 라운드를 시작해보세요.</p>
+            <button class="btn btn-primary" onclick="openCardModal()">+ 첫 스킬카드 추가하기</button>
+          </div>
+        ` : ''}
+
+        <div class="panel">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+            <div>
+              <div style="font-size:12px; color:var(--text-secondary);">최상위 성장 레벨</div>
+              <div style="font-size:26px; font-weight:900;">Lv.${lvl.level} <span style="font-size:15px; font-weight:600; color:#a5b4fc;">${escapeHtml(state.chapter.equippedTitle)}</span></div>
+            </div>
+            <div style="font-size:13px; color:var(--text-secondary);">
+              누적 <strong>${totalXp} XP</strong> · 다음 레벨까지 ${lvl.nextLevelXp - lvl.currentLevelXp} XP
+            </div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${lvl.percent}%"></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="panel" style="margin-top:0;">
+            <div class="section-title" style="margin-bottom:12px;">
+              <span>☀️ 오늘의 플레이 현황</span>
+              <span style="font-size:12px; color:var(--text-muted);">${getLocalDateKey()}</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="stat-box">
+                <div class="stat-label">오늘 완료 라운드</div>
+                <div class="stat-value" style="color:#5eead4;">${today.rounds}<span style="font-size:14px; font-weight:600;"> 회</span></div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">오늘 획득 경험치</div>
+                <div class="stat-value" style="color:#a5b4fc;">+${today.xp}<span style="font-size:14px; font-weight:600;"> XP</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:0;">
+            <div class="section-title" style="margin-bottom:12px;">
+              <span>🚩 챕터 ${state.chapter.number} 주간 목표</span>
+              <span class="badge ${chStats.goalAchieved ? 'badge-status-tried' : 'badge-status-repeated'}">
+                ${chStats.goalAchieved ? '목표 달성!' : `${chStats.rounds} / ${chStats.targetRounds} 라운드`}
+              </span>
+            </div>
+            <div class="progress-track" style="margin-bottom:10px;">
+              <div class="progress-fill" style="width:${chPct}%; background:linear-gradient(90deg, #3b82f6, #10b981);"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-secondary);">
+              <span>시즌 테마: <strong style="color:${getActiveSeasonDomain() ? getDomainMeta(getActiveSeasonDomain()).color : '#98a6bc'};">${getActiveSeasonDomain() || '미설정 (챕터 탭에서 선택)'}</strong></span>
+              <span>등급 프리뷰: <strong>${chStats.grade}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:16px; text-align:center; padding:26px 20px;">
+          <h3 style="margin:0 0 6px; font-size:19px;">
+            ${hasOngoingRound ? '진행 중인 라운드가 있습니다' : '오늘의 스킬카드를 뽑아볼까요?'}
+          </h3>
+          <p style="margin:0 0 18px; font-size:13.5px; color:var(--text-secondary);">
+            ${hasOngoingRound
+              ? '이전에 진행하던 드로우/적용 화면으로 바로 이어서 진행할 수 있습니다.'
+              : `현재 활성 카드 ${activeCards.length}장 · 드로우 후보 ${state.chapter.drawCount}장 · 리롤 ${state.chapter.maxRerolls}회`}
+          </p>
+          <button class="btn btn-primary btn-lg" style="min-width:240px;" onclick="goToDrawFromHome()">
+            ${hasOngoingRound ? '▶ 진행 중인 라운드 이어하기' : '🎴 라운드 시작'}
+          </button>
+        </div>
+      `;
+    }
+
+    // ---------- 2. DRAW TAB ----------
+    function renderDrawTab() {
+      const activePool = state.cards.filter(c => !c.archived);
+      const r = state.activeRound;
+
+      // 정산 화면은 풀이 비어 있어도 보여준다
+      if (activePool.length === 0 && r.step !== 'settlement') {
+        return `
+          <div class="empty-state">
+            <div class="empty-state-icon">🃏</div>
+            <h3 style="margin:0 0 8px; color:var(--text-primary);">뽑을 수 있는 스킬카드가 없습니다</h3>
+            <p style="margin:0 0 16px;">카드북에서 카드를 추가하거나 보관함의 카드를 복원해야 라운드를 진행할 수 있습니다.</p>
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="openCardModal()">+ 새 카드 추가하기</button>
+              <button class="btn" onclick="switchTab('cardbook')">카드북으로 이동</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Step 1: 시간 선택
+      if (r.step === 'idle') {
+        const seasonDomain = getActiveSeasonDomain();
+        return `
+          <div class="panel">
+            <div class="section-title">
+              <span>🎴 새 라운드 — 오늘 쓸 수 있는 시간</span>
+              <span style="font-size:12px; color:var(--text-secondary);">후보 ${state.chapter.drawCount}장 · 리롤 ${state.chapter.maxRerolls}회</span>
+            </div>
+            <p style="margin:0; font-size:13.5px; color:var(--text-secondary);">
+              선택한 시간대에 맞는 소요시간 카드가 우대 등장합니다.
+              ${seasonDomain ? `현재 시즌 테마(<strong style="color:${getDomainMeta(seasonDomain).color}">${seasonDomain}</strong>) 카드도 더 자주 등장합니다.` : ''}
+            </p>
+
+            <div class="time-option-grid">
+              <button class="time-card-btn ${r.timeBudget === '30m' ? 'selected' : ''}" onclick="selectTimeBudget('30m')">
+                <span style="font-size:22px;">⚡</span>
+                <strong style="font-size:16px;">30분</strong>
+                <span style="font-size:12.5px; color:var(--text-secondary);">가볍고 빠른 집중 (40분 이하 우대)</span>
+              </button>
+              <button class="time-card-btn ${r.timeBudget === '1-2h' ? 'selected' : ''}" onclick="selectTimeBudget('1-2h')">
+                <span style="font-size:22px;">🕰️</span>
+                <strong style="font-size:16px;">1~2시간</strong>
+                <span style="font-size:12.5px; color:var(--text-secondary);">깊이 있는 실행 (35~130분 우대)</span>
+              </button>
+              <button class="time-card-btn ${r.timeBudget === 'allday' ? 'selected' : ''}" onclick="selectTimeBudget('allday')">
+                <span style="font-size:22px;">🌅</span>
+                <strong style="font-size:16px;">종일</strong>
+                <span style="font-size:12.5px; color:var(--text-secondary);">긴 호흡의 프로젝트·고난이도 허용</span>
+              </button>
+            </div>
+
+            <button class="btn btn-primary btn-lg btn-block" onclick="drawCandidateCards()">
+              ✨ 카드 ${Math.min(state.chapter.drawCount, activePool.length)}장 뽑기
+            </button>
+          </div>
+        `;
+      }
+
+      // Step 2: 후보 중 1장 선택 (뒤집기 연출)
+      if (r.step === 'picking') {
+        const candidates = r.candidates.map(id => state.cards.find(c => c.id === id)).filter(Boolean);
+        const allFlipped = candidates.every(c => r.flippedIds.includes(c.id));
+
+        return `
+          <div class="panel" style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0; font-size:18px;">카드를 뒤집어 오늘 실행할 1장을 선택하세요</h3>
+                <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">
+                  ${activePool.length < state.chapter.drawCount
+                    ? `현재 활성 카드가 ${activePool.length}장뿐이라 ${candidates.length}장이 등장했습니다.`
+                    : `시간대·챕터(Ch.${state.chapter.number})·테마 가중치로 뽑힌 ${candidates.length}장의 후보입니다.`}
+                </p>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                ${!allFlipped ? `<button class="btn btn-sm" id="btnFlipAll" onclick="flipAllCandidates()">모두 뒤집기</button>` : ''}
+                <button class="btn btn-sm" ${r.rerollsLeft <= 0 ? 'disabled' : ''} onclick="rerollCandidates()">
+                  🎲 리롤 (${r.rerollsLeft}회 남음)
+                </button>
+                <button class="btn btn-sm" onclick="cancelDrawToIdle()">시간 다시 선택</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            ${candidates.map(card => {
+              const isFlipped = r.flippedIds.includes(card.id);
+              const st = STATUS_META[card.status] || STATUS_META.unused;
+              return `
+                <div class="flip-scene">
+                  <div class="flip-card ${isFlipped ? 'is-flipped' : ''}" data-card-id="${card.id}">
+                    <div class="flip-face flip-face-back" onclick="flipCandidate('${card.id}')">
+                      <div style="font-size:36px;">🎴</div>
+                      <div style="font-weight:700; color:#c7d2fe;">터치하여 카드 확인</div>
+                      <span class="badge ${st.badge}">${st.rarity} 기운</span>
+                    </div>
+                    <div class="flip-face flip-face-front">
+                      <div class="skill-card ${st.class}" style="height:100%;">
+                        ${renderSkillCardInner(card, {
+                          showExpandBtn: false,
+                          extraFooterHtml: `
+                            <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="chooseCandidateCard('${card.id}')">
+                              이 카드로 적용 시작
+                            </button>
+                          `
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      // Step 3: 적용 중 (앞면 + 선택적 타이머 + 적용 완료)
+      if (r.step === 'applying') {
+        const card = state.cards.find(c => c.id === r.selectedCardId);
+        if (!card) {
+          resetRoundState();
+          saveState();
+          return renderDrawTab();
+        }
+        const st = STATUS_META[card.status] || STATUS_META.unused;
+        const elapsed = getLiveElapsedSeconds();
+
+        return `
+          <div class="grid-2">
+            <div class="skill-card ${st.class}">
+              ${renderSkillCardInner(card, { showExpandBtn: true })}
+            </div>
+
+            <div class="panel" style="margin-top:0; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div class="section-title" style="margin-bottom:8px;">
+                  <span>⏱ 실행 타이머 (선택)</span>
+                  <span style="font-size:12px; color:var(--text-secondary);">목표 ${card.duration}분</span>
+                </div>
+                <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary);">
+                  타이머를 켜두고 몰입하거나, 바로 실행한 뒤 완료 버튼을 누르세요.
+                </p>
+                <div class="timer-display" id="liveTimerDisplay">${formatDurationSec(elapsed)}</div>
+                <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;">
+                  <button class="btn ${r.timerRunning ? 'btn-danger' : 'btn-primary'}" onclick="toggleRoundTimer()">
+                    ${r.timerRunning ? '⏸ 일시정지' : '▶ 타이머 시작'}
+                  </button>
+                  <button class="btn" onclick="resetRoundTimer()">↺ 초기화</button>
+                </div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn btn-success btn-lg btn-block" onclick="proceedToReview()">
+                  ✅ 적용 완료 — 후기 남기기
+                </button>
+                <button class="btn btn-sm" onclick="cancelDrawToIdle()">라운드 취소</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Step 4: 후기 입력
+      if (r.step === 'review') {
+        const card = state.cards.find(c => c.id === r.selectedCardId);
+        if (!card) {
+          resetRoundState();
+          saveState();
+          return renderDrawTab();
+        }
+        const st = STATUS_META[card.status] || STATUS_META.unused;
+        const expectedBaseXp = 10 + card.difficulty * 5;
+
+        return `
+          <div class="panel" style="max-width:640px; margin:0 auto;">
+            <div class="section-title">
+              <span>📝 적용 결과 기록</span>
+              <span class="badge ${st.badge}">${escapeHtml(card.title)}</span>
+            </div>
+
+            <form onsubmit="submitRoundReview(event)">
+              <div class="form-group">
+                <label class="form-label">효과 별점 (1~5점) *</label>
+                <div class="rating-stars" id="reviewStars">
+                  ${[1, 2, 3, 4, 5].map(v => `
+                    <button type="button" class="star-btn ${v <= 4 ? 'filled' : ''}" data-val="${v}" onclick="setReviewRating(${v})">★</button>
+                  `).join('')}
+                </div>
+                <input type="hidden" id="reviewRatingVal" value="4" />
+              </div>
+
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="form-label" style="margin:0;">후기 텍스트</label>
+                  <span id="reviewCharHint" style="font-size:12px; color:var(--text-secondary);">0 / 30자 (30자 이상 시 +5 XP 보너스!)</span>
+                </div>
+                <textarea id="reviewTextInput" class="form-control" oninput="updateReviewCharHint()" placeholder="직접 적용해보니 어땠나요? 느낀 점이나 다음 개선 포인트를 적어보세요."></textarea>
+              </div>
+
+              ${card.status === 'repeated' ? `
+                <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.45); border-radius:12px; padding:14px; margin-bottom:16px;">
+                  <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="confirmMasteryCheck" style="width:20px; height:20px; margin-top:2px; accent-color:#f59e0b;" />
+                    <div>
+                      <strong style="color:#fcd34d;">👑 숙달 확정 ("능숙해졌다")</strong>
+                      <div style="font-size:12.5px; color:var(--text-secondary); margin-top:2px;">
+                        이 카드는 현재 <strong>반복</strong> 단계입니다. 이제 의식하지 않아도 자연스럽게 쓸 수 있다면 체크하여 숙달로 승급하세요.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              ` : ''}
+
+              <div style="background:rgba(255,255,255,0.03); padding:12px 14px; border-radius:10px; font-size:13px; color:var(--text-secondary); margin-bottom:16px;">
+                예상 획득 경험치: 기본 10 + 난이도(${card.difficulty})×5 = <strong>${expectedBaseXp} XP</strong> (후기 30자 이상 시 <strong>+5 XP</strong>)
+              </div>
+
+              <div style="display:flex; gap:10px;">
+                <button type="button" class="btn" onclick="backToApplying()">◀ 뒤로</button>
+                <button type="submit" class="btn btn-primary btn-lg" style="flex:1;">정산하고 보상 받기 🎉</button>
+              </div>
+            </form>
+          </div>
+        `;
+      }
+
+      // Step 5: 정산 연출
+      if (r.step === 'settlement' && r.lastSettlement) {
+        const s = r.lastSettlement;
+        const dom = getDomainMeta(s.domain);
+        const prevSt = STATUS_META[s.prevStatus];
+        const newSt = STATUS_META[s.newStatus];
+        const statusChanged = s.prevStatus !== s.newStatus;
+
+        return `
+          <div class="settlement-hero" style="max-width:600px; margin:0 auto;">
+            <div style="font-size:44px; margin-bottom:4px;">${statusChanged ? '🎊' : '✨'}</div>
+            <h2 style="margin:0; font-size:22px;">라운드 완료!</h2>
+            <p style="margin:4px 0 14px; font-size:14px; color:var(--text-secondary);">“${escapeHtml(s.cardTitle)}” 실행 정산</p>
+
+            <div class="xp-pop">+${s.xpEarned} XP</div>
+            <div style="font-size:12.5px; color:var(--text-secondary); margin-bottom:18px;">
+              완료 10 + 난이도(${s.difficulty})×5 ${s.bonusXp > 0 ? `+ 장문 후기 보너스 ${s.bonusXp}` : ''} → <strong style="color:${dom.color}">${dom.name}</strong> 분야 누적
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:left; margin-bottom:18px;">
+              <div class="stat-box">
+                <div class="stat-label">카드 적용 횟수</div>
+                <div style="font-size:20px; font-weight:800;">
+                  ${s.prevCount}회 <span style="color:var(--text-muted);">→</span> <span style="color:#5eead4;">${s.newCount}회</span>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">카드 상태 변화</div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                  <span class="badge ${prevSt.badge}">${prevSt.label}</span>
+                  <span>→</span>
+                  <span class="badge ${newSt.badge}">${newSt.label}</span>
+                </div>
+                ${statusChanged ? `<div style="font-size:11.5px; color:#fcd34d; margin-top:4px; font-weight:700;">등급 승급!</div>` : ''}
+              </div>
+            </div>
+
+            ${s.leveledUp ? `
+              <div style="background:rgba(251,191,36,0.16); border:1px solid rgba(251,191,36,0.5); border-radius:12px; padding:12px; margin-bottom:18px;">
+                <strong style="color:#fcd34d;">🌟 LEVEL UP! Lv.${s.newLevel} 달성!</strong>
+              </div>
+            ` : ''}
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn" style="flex:1;" onclick="finishSettlementToHome()">🏠 홈으로</button>
+              <button class="btn btn-primary" style="flex:1;" onclick="startAnotherRound()">🎴 한 라운드 더</button>
+            </div>
+          </div>
+        `;
+      }
+
+      return '';
+    }
+
+    // ---------- 3. CARD BOOK TAB ----------
+    // 목록 영역만 따로 렌더링해서, 검색 입력 중에 입력창 포커스/한글 조합이 끊기지 않게 한다.
+    function renderCardBookList() {
+      const activeCards = state.cards.filter(c => !c.archived);
+      const archivedCards = state.cards.filter(c => c.archived);
+      const isArchivedView = state.ui.cardbookView === 'archived';
+      let filtered = isArchivedView ? archivedCards : activeCards;
+
+      if (!isArchivedView && state.ui.cardbookStatus !== 'all') {
+        filtered = filtered.filter(c => c.status === state.ui.cardbookStatus);
+      }
+      if (state.ui.cardbookDomain !== 'all') {
+        filtered = filtered.filter(c => c.domain === state.ui.cardbookDomain);
+      }
+      if (state.ui.cardbookSearch.trim()) {
+        const q = state.ui.cardbookSearch.trim().toLowerCase();
+        filtered = filtered.filter(c =>
+          c.title.toLowerCase().includes(q) ||
+          c.action.toLowerCase().includes(q) ||
+          (c.summary || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (filtered.length === 0) {
+        return `
+          <div class="empty-state">
+            <div class="empty-state-icon">${isArchivedView ? '📦' : '🗂️'}</div>
+            <h3 style="margin:0 0 8px; color:var(--text-primary);">
+              ${isArchivedView ? '보관함이 비어 있습니다' : '표시할 스킬카드가 없습니다'}
+            </h3>
+            <p style="margin:0 0 16px;">
+              ${isArchivedView
+                ? '보관함으로 보낸 카드가 이곳에 표시됩니다.'
+                : '유튜브·책·트윗에서 발견한 성장 팁을 카드로 추가해보세요.'}
+            </p>
+            ${!isArchivedView ? `<button class="btn btn-primary" onclick="openCardModal()">+ 스킬카드 추가하기</button>` : ''}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="grid-3" style="align-items:start;">
+          ${filtered.map(card => {
+            const st = STATUS_META[card.status] || STATUS_META.unused;
+            if (isArchivedView) {
+              return `
+                <div class="skill-card ${st.class}">
+                  ${renderSkillCardInner(card, {
+                    showExpandBtn: true,
+                    extraFooterHtml: `
+                      <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.28); padding:8px 10px; border-radius:8px; font-size:12.5px; color:#fca5a5;">
+                        <strong>보관 이유:</strong> ${escapeHtml(card.archiveReason || '기록 없음')}
+                      </div>
+                      <div style="display:flex; gap:8px; margin-top:4px;">
+                        <button class="btn btn-sm btn-success" style="flex:1;" onclick="restoreCard('${card.id}')">↩ 드로우 풀 복원</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCardPermanent('${card.id}')">삭제</button>
+                      </div>
+                    `
+                  })}
+                </div>
+              `;
+            }
+
+            return `
+              <div class="skill-card ${st.class}">
+                ${renderSkillCardInner(card, {
+                  showExpandBtn: true,
+                  backActionsHtml: (c) => `
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                      ${c.status === 'repeated' ? `
+                        <button class="btn btn-sm btn-gold btn-block" onclick="confirmMasteryFromBook('${c.id}')">
+                          👑 능숙해졌다 (숙달 확정)
+                        </button>
+                      ` : ''}
+                      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn btn-sm" style="flex:1;" onclick="openCardModal('${c.id}')">✏️ 수정</button>
+                        <button class="btn btn-sm" style="flex:1;" onclick="openArchiveModal('${c.id}')">📦 보관함</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCardPermanent('${c.id}')">🗑️</button>
+                      </div>
+                    </div>
+                  `
+                })}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderCardBookTab() {
+      const activeCards = state.cards.filter(c => !c.archived);
+      const archivedCards = state.cards.filter(c => c.archived);
+
+      const counts = {
+        all: activeCards.length,
+        unused: activeCards.filter(c => c.status === 'unused').length,
+        tried: activeCards.filter(c => c.status === 'tried').length,
+        repeated: activeCards.filter(c => c.status === 'repeated').length,
+        mastered: activeCards.filter(c => c.status === 'mastered').length
+      };
+
+      const isArchivedView = state.ui.cardbookView === 'archived';
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+          <div class="chip-row" style="margin:0;">
+            <button class="chip ${!isArchivedView ? 'active' : ''}" onclick="setCardbookView('active')">
+              📚 활성 카드 (${activeCards.length})
+            </button>
+            <button class="chip ${isArchivedView ? 'active' : ''}" onclick="setCardbookView('archived')">
+              📦 보관함 (${archivedCards.length})
+            </button>
+          </div>
+          <button class="btn btn-primary" onclick="openCardModal()">+ 새 스킬카드 추가</button>
+        </div>
+
+        <div class="panel" style="padding:14px 16px; margin-bottom:16px;">
+          ${!isArchivedView ? `
+            <div class="chip-row">
+              <button class="chip ${state.ui.cardbookStatus === 'all' ? 'active' : ''}" onclick="setCardbookStatus('all')">전체 (${counts.all})</button>
+              <button class="chip ${state.ui.cardbookStatus === 'unused' ? 'active' : ''}" onclick="setCardbookStatus('unused')">미사용 (${counts.unused})</button>
+              <button class="chip ${state.ui.cardbookStatus === 'tried' ? 'active' : ''}" onclick="setCardbookStatus('tried')">시도 (${counts.tried})</button>
+              <button class="chip ${state.ui.cardbookStatus === 'repeated' ? 'active' : ''}" onclick="setCardbookStatus('repeated')">반복 (${counts.repeated})</button>
+              <button class="chip ${state.ui.cardbookStatus === 'mastered' ? 'active' : ''}" onclick="setCardbookStatus('mastered')">숙달 (${counts.mastered})</button>
+            </div>
+          ` : ''}
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select class="form-control" style="max-width:200px;" onchange="setCardbookDomain(this.value)">
+              <option value="all" ${state.ui.cardbookDomain === 'all' ? 'selected' : ''}>전체 분야</option>
+              ${DOMAINS.map(d => `<option value="${d.name}" ${state.ui.cardbookDomain === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+            </select>
+            <input type="search" class="form-control" style="flex:1; min-width:180px;" placeholder="카드 제목, 행동, 메모 검색..."
+              value="${escapeHtml(state.ui.cardbookSearch)}" oninput="setCardbookSearch(this.value)" />
+          </div>
+        </div>
+
+        <div id="cbList">${renderCardBookList()}</div>
+      `;
+    }
+
+    // ---------- 4. GROWTH TAB ----------
+    function renderGrowthTab() {
+      const totalXp = getTotalXp();
+      const lvl = getLevelInfo(totalXp);
+      const activeCards = state.cards.filter(c => !c.archived);
+      const totalCount = activeCards.length;
+
+      const dist = {
+        unused: activeCards.filter(c => c.status === 'unused').length,
+        tried: activeCards.filter(c => c.status === 'tried').length,
+        repeated: activeCards.filter(c => c.status === 'repeated').length,
+        mastered: activeCards.filter(c => c.status === 'mastered').length
+      };
+
+      // 컬렉션 완성도: 미사용 0, 시도 35%, 반복 70%, 숙달 100% 가중 평균
+      const completionScore = totalCount === 0 ? 0 : Math.round(
+        ((dist.tried * 0.35 + dist.repeated * 0.7 + dist.mastered * 1.0) / totalCount) * 100
+      );
+
+      return `
+        <div class="panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <div style="font-size:12px; color:var(--text-secondary);">최상위 레벨 & 누적 성장</div>
+              <div style="font-size:28px; font-weight:900;">Lv.${lvl.level} <span style="font-size:16px; color:#5eead4;">${totalXp} XP</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px; color:var(--text-secondary);">총 실행 라운드</div>
+              <div style="font-size:22px; font-weight:800;">${state.logs.length}회</div>
+            </div>
+          </div>
+          <div class="progress-track" style="margin-top:12px;">
+            <div class="progress-fill" style="width:${lvl.percent}%"></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="panel" style="margin-top:0;">
+            <div class="section-title">🕸️ 5개 성장 분야 레이더</div>
+            ${renderRadarChartSVG()}
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px; font-size:12.5px;">
+              ${DOMAINS.map(d => `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                  <span><strong style="color:${d.color}">● ${d.name}</strong> <span style="color:var(--text-muted);">— ${d.desc}</span></span>
+                  <strong>${state.domainXp[d.name] || 0} XP</strong>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="panel" style="margin-top:0;">
+              <div class="section-title">
+                <span>🃏 카드 상태 분포 & 완성도</span>
+                <span style="color:#fcd34d; font-size:15px;">완성도 ${completionScore}%</span>
+              </div>
+              <div class="progress-track" style="margin-bottom:14px;">
+                <div class="progress-fill" style="width:${completionScore}%; background:linear-gradient(90deg, #10b981, #3b82f6, #f59e0b);"></div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+                ${Object.entries(STATUS_META).map(([key, meta]) => `
+                  <div class="stat-box" style="padding:10px 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span class="badge ${meta.badge}">${meta.label}</span>
+                      <strong style="font-size:18px;">${dist[key]}</strong>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">${meta.desc}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top:0;">
+              <div class="section-title">📅 최근 4주 활동 그래프 (28일)</div>
+              ${renderActivity28Days()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ---------- 5. CHAPTER TAB ----------
+    function renderChapterTab() {
+      const ch = state.chapter;
+      const stats = getChapterStats(ch.number);
+      const pct = Math.min(100, Math.round((stats.rounds / stats.targetRounds) * 100));
+      const daysElapsed = Math.max(0, getDaysSince(ch.startDateKey));
+      const daysLeft = Math.max(0, 7 - daysElapsed);
+      const seasonBlock = getCurrentSeasonBlock();
+      const canChooseSeason = needsSeasonThemeSelection();
+
+      return `
+        <div class="panel">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+            <div>
+              <span class="badge badge-status-repeated" style="margin-bottom:6px;">CHAPTER ${ch.number} · 1주일 단위</span>
+              <h2 style="margin:0; font-size:22px;">주간 목표: ${stats.rounds} / ${stats.targetRounds} 라운드</h2>
+              <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">
+                시작일 ${ch.startDateKey} · 경과 ${daysElapsed}일 (${daysLeft > 0 ? `종료까지 ${daysLeft}일 남음` : '1주일 기간 완료!'})
+              </p>
+            </div>
+            <div class="grade-badge grade-${stats.grade}" title="현재 챕터 예상 등급">${stats.grade}</div>
+          </div>
+
+          <div class="progress-track" style="margin:16px 0 10px; height:12px;">
+            <div class="progress-fill" style="width:${pct}%"></div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+            <div style="font-size:13px; color:var(--text-secondary);">
+              목표 달성 시 보상: <strong>${getNextChapterRewardLabel(ch.number)}</strong>
+            </div>
+            <button class="btn ${stats.goalAchieved || daysElapsed >= 7 ? 'btn-primary' : ''}" onclick="openSettleChapter()">
+              🏁 이번 챕터 주간 정산하기
+            </button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <!-- 주간 정산 현황 -->
+          <div class="panel" style="margin-top:0;">
+            <div class="section-title">📊 이번 주간 정산 현황</div>
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:14px;">
+              <div class="stat-box">
+                <div class="stat-label">완료 라운드</div>
+                <div class="stat-value">${stats.rounds}회</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">획득 경험치</div>
+                <div class="stat-value" style="color:#a5b4fc;">+${stats.xp}</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">새로 시도한 카드</div>
+                <div class="stat-value" style="color:#6ee7b7;">${stats.newlyTriedCount}장</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">승급한 카드</div>
+                <div class="stat-value" style="color:#fcd34d;">${stats.promotedCount}회</div>
+              </div>
+            </div>
+
+            <div style="font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:8px;">
+              분야별 균형 (${stats.activeDomains} / 5 분야 실행)
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px;">
+              ${DOMAINS.map(d => {
+                const cnt = stats.domainCounts[d.name] || 0;
+                const barW = stats.rounds ? Math.round((cnt / stats.rounds) * 100) : 0;
+                return `
+                  <div style="font-size:12.5px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                      <span style="color:${d.color}; font-weight:600;">${d.name}</span>
+                      <span>${cnt}회</span>
+                    </div>
+                    <div class="progress-track" style="height:6px;">
+                      <div style="height:100%; width:${barW}%; background:${d.color}; border-radius:99px;"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- 시스템 자원 & 현실 보상 -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="panel" style="margin-top:0;">
+              <div class="section-title">🎁 시스템 자원 & 칭호</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                <div class="stat-box">
+                  <div class="stat-label">드로우 후보 수</div>
+                  <div class="stat-value">${ch.drawCount}장</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">라운드당 리롤</div>
+                  <div class="stat-value">${ch.maxRerolls}회</div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">장착 중인 칭호 (보유 ${ch.unlockedTitles.length}개)</label>
+                <select class="form-control" onchange="equipTitle(this.value)">
+                  ${ch.unlockedTitles.map(t => `<option value="${escapeHtml(t)}" ${ch.equippedTitle === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top:0; border-color:${stats.goalAchieved ? 'rgba(245,158,11,0.6)' : 'var(--border-subtle)'};">
+              <div class="section-title" style="margin-bottom:8px;">
+                <span>🗝️ 나의 현실 보상 한 줄</span>
+                <span class="badge ${stats.goalAchieved ? 'badge-status-mastered' : 'badge-status-unused'}">
+                  ${stats.goalAchieved ? '🔓 잠금 해제!' : '🔒 목표 달성 시 오픈'}
+                </span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="realRewardInput" class="form-control"
+                  value="${escapeHtml(ch.realReward)}"
+                  placeholder="예: 목표 달성하면 주말에 맛있는 디저트 먹기!" />
+                <button class="btn" onclick="saveRealReward()">저장</button>
+              </div>
+              ${stats.goalAchieved && ch.realReward ? `
+                <div style="margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(245,158,11,0.16); color:#fde68a; font-weight:700;">
+                  🎉 현실 보상 오픈: “${escapeHtml(ch.realReward)}” — 스스로에게 선물하세요!
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- 시즌 테마 (4챕터마다) -->
+        <div class="panel" style="margin-top:16px;">
+          <div class="section-title">
+            <span>🧭 시즌 테마 설정 (시즌 ${seasonBlock} · 4챕터마다 선택)</span>
+            ${ch.seasonThemeDomain
+              ? `<span class="badge" style="background:${getDomainMeta(ch.seasonThemeDomain).color}22; color:${getDomainMeta(ch.seasonThemeDomain).color};">현재 테마: ${ch.seasonThemeDomain}</span>`
+              : `<span class="badge badge-status-unused">미선택</span>`}
+          </div>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary);">
+            ${canChooseSeason
+              ? '이번 시즌(4챕터 주기)에 집중하고 싶은 성장 분야를 선택하세요. 드로우 시 해당 분야 카드의 등장 확률이 높아집니다.'
+              : `현재 시즌 ${seasonBlock} 테마가 적용 중입니다. 다음 테마 변경은 챕터 ${seasonBlock * 4 + 1}에 열립니다.`}
+          </p>
+          <div class="chip-row" style="margin-bottom:0;">
+            ${DOMAINS.map(d => {
+              const isSelected = ch.seasonThemeDomain === d.name;
+              return `
+                <button class="chip ${isSelected ? 'active' : ''}"
+                  ${!canChooseSeason ? 'disabled' : ''}
+                  style="${isSelected ? `background:${d.color}; border-color:${d.color}; color:#0f172a;` : ''}"
+                  onclick="selectSeasonTheme('${d.name}')">
+                  ${d.name}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- 주간 보스전 (확장 슬롯) -->
+        <div class="panel" style="margin-top:16px; border-style:dashed; border-color:rgba(255,255,255,0.16); background:rgba(255,255,255,0.015);">
+          <div class="section-title" style="color:var(--text-muted); margin-bottom:6px;">
+            <span>⚔️ 주간 보스전 (확장 예정 슬롯)</span>
+            <span class="badge badge-status-unused">Coming Soon</span>
+          </div>
+          <p style="margin:0; font-size:13px; color:var(--text-muted);">
+            향후 주간 목표를 시험하는 ‘보스 도전 미션’ 시스템이 추가될 자리입니다.
+          </p>
+        </div>
+
+        ${ch.pastSettlements.length > 0 ? `
+          <div class="panel" style="margin-top:16px;">
+            <div class="section-title">📜 지난 챕터 기록</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              ${[...ch.pastSettlements].reverse().map(ps => `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 12px; border-radius:10px; background:var(--bg-card); border:1px solid var(--border-subtle);">
+                  <div>
+                    <strong>Chapter ${ps.chapterNum}</strong>
+                    <span style="font-size:12.5px; color:var(--text-secondary); margin-left:8px;">
+                      ${ps.rounds}/${ps.targetRounds} 라운드 · +${ps.xp} XP · 승급 ${ps.promotedCount}회
+                    </span>
+                  </div>
+                  <span class="badge badge-status-mastered">등급 ${ps.grade}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    // ---------- 6. STRATEGY TAB ----------
+    function renderStrategyTab() {
+      const lowest = getLowestXpDomain();
+      const lowestMeta = getDomainMeta(lowest.domain);
+      const recommended = state.strategies.filter(s => s.domain === lowest.domain);
+
+      return `
+        <!-- 맞춤 공략 추천 -->
+        <div class="panel" style="border-color:${lowestMeta.color}55; background:linear-gradient(135deg, ${lowestMeta.color}14, var(--bg-elevated) 60%);">
+          <div class="section-title" style="margin-bottom:8px;">
+            <span>💡 맞춤 공략 추천</span>
+            <span class="badge" style="background:${lowestMeta.color}25; color:${lowestMeta.color};">
+              최저 누적 분야: ${lowest.domain} (${lowest.xp} XP)
+            </span>
+          </div>
+          ${recommended.length > 0 ? `
+            <p style="margin:0 0 12px; font-size:13.5px; color:var(--text-secondary);">
+              현재 경험치가 가장 적은 <strong>${lowest.domain}</strong> 분야의 공략을 카드로 변환해 실천해보세요!
+            </p>
+            <div class="grid-2">
+              ${recommended.map(st => renderStrategyCardHtml(st, true)).join('')}
+            </div>
+          ` : `
+            <p style="margin:0; font-size:13.5px; color:var(--text-secondary);">
+              현재 <strong style="color:${lowestMeta.color}">${lowest.domain}</strong> 분야의 경험치가 가장 낮습니다. 아래 폼에서 <strong>${lowest.domain}</strong> 관련 공략을 먼저 수집해보세요!
+            </p>
+          `}
+        </div>
+
+        <!-- 공략 수집 폼 -->
+        <div class="panel" style="margin-top:16px;">
+          <div class="section-title">📥 다른 사람의 공략 수집하기</div>
+          <form onsubmit="addStrategy(event)">
+            <div class="grid-2" style="gap:12px;">
+              <div class="form-group">
+                <label class="form-label">공략 제목 *</label>
+                <input type="text" id="stTitle" class="form-control" required placeholder="예: 파인만 학습법 4단계" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">성장 분야 *</label>
+                <select id="stDomain" class="form-control" required>
+                  ${DOMAINS.map(d => `<option value="${d.name}" ${d.name === lowest.domain ? 'selected' : ''}>${d.name}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">출처 링크 (선택)</label>
+              <input type="url" id="stUrl" class="form-control" placeholder="https://youtube.com/... 또는 블로그·트윗 링크" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">핵심 요약 *</label>
+              <textarea id="stSummary" class="form-control" required placeholder="공략의 핵심 흐름과 행동 아이디어를 요약해두세요."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">공략 저장하기</button>
+          </form>
+        </div>
+
+        <!-- 수집한 공략 목록 -->
+        <div class="panel" style="margin-top:16px;">
+          <div class="section-title">📚 수집한 공략 목록 (${state.strategies.length})</div>
+          ${state.strategies.length === 0 ? `
+            <div class="empty-state">
+              <div class="empty-state-icon">🧭</div>
+              <p style="margin:0;">아직 수집한 공략이 없습니다. 유튜브나 아티클에서 얻은 인사이트를 기록하고 카드로 쪼개보세요!</p>
+            </div>
+          ` : `
+            <div class="grid-2">
+              ${[...state.strategies].sort((a, b) => b.createdAt - a.createdAt).map(st => renderStrategyCardHtml(st, false)).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderStrategyCardHtml(st, isHighlighted) {
+      const dom = getDomainMeta(st.domain);
+      const link = safeUrl(st.sourceUrl);
+      return `
+        <div class="stat-box" style="display:flex; flex-direction:column; gap:10px; ${isHighlighted ? `border-color:${dom.color}66;` : ''}">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span class="badge" style="background:${dom.color}22; color:${dom.color};">${escapeHtml(dom.name)}</span>
+            ${isHighlighted ? `<span class="badge badge-status-mastered">추천</span>` : ''}
+          </div>
+          <h4 style="margin:0; font-size:16px;">${escapeHtml(st.title)}</h4>
+          <p style="margin:0; font-size:13px; color:var(--text-secondary); white-space:pre-line; flex:1;">${escapeHtml(st.summary)}</p>
+          ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px; word-break:break-all;">🔗 ${escapeHtml(link)}</a>` : ''}
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="btn btn-sm btn-primary" style="flex:1;" onclick="openConvertStrategyModal('${st.id}')">🃏 카드로 변환</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteStrategy('${st.id}')">삭제</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== [9. JAVASCRIPT: ACTIONS & EVENT HANDLERS] ====================
+    function showToast(msg) {
+      const box = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => { el.remove(); }, 3200);
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function switchTab(tab) {
+      state.ui.currentTab = tab;
+      saveState();
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function goToDrawFromHome() {
+      switchTab('draw');
+    }
+
+    // --- DRAW 액션 ---
+    function selectTimeBudget(val) {
+      state.activeRound.timeBudget = val;
+      saveState();
+      renderApp();
+    }
+
+    // 뒤집기 연출은 DOM 클래스만 바꿔서 CSS 전환(transition)이 실제로 재생되게 한다.
+    function flipDom(cardId) {
+      const el = document.querySelector(`.flip-card[data-card-id="${cardId}"]`);
+      if (el) el.classList.add('is-flipped');
+    }
+
+    function removeFlipAllButtonIfDone() {
+      const r = state.activeRound;
+      if (r.candidates.every(id => r.flippedIds.includes(id))) {
+        const btn = document.getElementById('btnFlipAll');
+        if (btn) btn.remove();
+      }
+    }
+
+    function autoFlipSequence(ids, base, step) {
+      ids.forEach((id, idx) => {
+        setTimeout(() => {
+          const r = state.activeRound;
+          if (r.step === 'picking' && r.candidates.includes(id) && !r.flippedIds.includes(id)) {
+            r.flippedIds.push(id);
+            saveState();
+            if (state.ui.currentTab === 'draw') {
+              flipDom(id);
+              removeFlipAllButtonIfDone();
+            }
+          }
+        }, base + idx * step);
+      });
+    }
+
+    function drawCandidateCards() {
+      const pool = state.cards.filter(c => !c.archived);
+      if (pool.length === 0) return;
+
+      const picked = weightedPickCandidates(pool, state.chapter.drawCount, state.activeRound.timeBudget);
+      state.activeRound.step = 'picking';
+      state.activeRound.candidates = picked.map(c => c.id);
+      state.activeRound.flippedIds = [];
+      state.activeRound.rerollsLeft = state.chapter.maxRerolls;
+      state.activeRound.selectedCardId = null;
+      saveState();
+      renderApp();
+
+      autoFlipSequence(state.activeRound.candidates, 320, 220);
+    }
+
+    function flipCandidate(cardId) {
+      const r = state.activeRound;
+      if (!r.flippedIds.includes(cardId)) {
+        r.flippedIds.push(cardId);
+        saveState();
+        flipDom(cardId);
+        removeFlipAllButtonIfDone();
+      }
+    }
+
+    function flipAllCandidates() {
+      const r = state.activeRound;
+      r.candidates.forEach(id => {
+        if (!r.flippedIds.includes(id)) r.flippedIds.push(id);
+        flipDom(id);
+      });
+      saveState();
+      removeFlipAllButtonIfDone();
+    }
+
+    function rerollCandidates() {
+      const r = state.activeRound;
+      if (r.rerollsLeft <= 0) return;
+      const pool = state.cards.filter(c => !c.archived);
+      if (pool.length <= r.candidates.length) {
+        showToast('교체할 다른 카드가 충분하지 않습니다. 카드를 더 추가해보세요!');
+        return;
+      }
+
+      const prevIds = [...r.candidates];
+      const picked = weightedPickCandidates(pool, state.chapter.drawCount, r.timeBudget, prevIds);
+      r.rerollsLeft -= 1;
+      r.candidates = picked.map(c => c.id);
+      r.flippedIds = [];
+      saveState();
+      renderApp();
+
+      autoFlipSequence(r.candidates, 260, 200);
+    }
+
+    function chooseCandidateCard(cardId) {
+      state.activeRound.selectedCardId = cardId;
+      state.activeRound.step = 'applying';
+      state.activeRound.timerRunning = false;
+      state.activeRound.timerElapsedSec = 0;
+      state.activeRound.timerLastStartedAt = null;
+      saveState();
+      renderApp();
+    }
+
+    // 렌더링 없이 라운드 상태만 초기화
+    function resetRoundState() {
+      const r = state.activeRound;
+      r.step = 'idle';
+      r.candidates = [];
+      r.flippedIds = [];
+      r.selectedCardId = null;
+      r.timerRunning = false;
+      r.timerElapsedSec = 0;
+      r.timerLastStartedAt = null;
+    }
+
+    function cancelDrawToIdle() {
+      resetRoundState();
+      saveState();
+      renderApp();
+    }
+
+    // 타이머 유틸
+    function getLiveElapsedSeconds() {
+      const r = state.activeRound;
+      let sec = r.timerElapsedSec || 0;
+      if (r.timerRunning && r.timerLastStartedAt) {
+        sec += Math.floor((Date.now() - r.timerLastStartedAt) / 1000);
+      }
+      return Math.max(0, sec);
+    }
+
+    function formatDurationSec(totalSec) {
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      if (hrs > 0) {
+        return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function toggleRoundTimer() {
+      const r = state.activeRound;
+      if (r.timerRunning) {
+        r.timerElapsedSec = getLiveElapsedSeconds();
+        r.timerRunning = false;
+        r.timerLastStartedAt = null;
+      } else {
+        r.timerRunning = true;
+        r.timerLastStartedAt = Date.now();
+      }
+      saveState();
+      renderApp();
+    }
+
+    function resetRoundTimer() {
+      state.activeRound.timerRunning = false;
+      state.activeRound.timerElapsedSec = 0;
+      state.activeRound.timerLastStartedAt = null;
+      saveState();
+      renderApp();
+    }
+
+    setInterval(() => {
+      if (state.ui.currentTab === 'draw' && state.activeRound.step === 'applying' && state.activeRound.timerRunning) {
+        const el = document.getElementById('liveTimerDisplay');
+        if (el) el.textContent = formatDurationSec(getLiveElapsedSeconds());
+      }
+    }, 500);
+
+    function proceedToReview() {
+      if (state.activeRound.timerRunning) {
+        state.activeRound.timerElapsedSec = getLiveElapsedSeconds();
+        state.activeRound.timerRunning = false;
+        state.activeRound.timerLastStartedAt = null;
+      }
+      state.activeRound.step = 'review';
+      saveState();
+      renderApp();
+    }
+
+    function backToApplying() {
+      state.activeRound.step = 'applying';
+      saveState();
+      renderApp();
+    }
+
+    function setReviewRating(val) {
+      document.getElementById('reviewRatingVal').value = val;
+      document.querySelectorAll('#reviewStars .star-btn').forEach(btn => {
+        btn.classList.toggle('filled', Number(btn.dataset.val) <= val);
+      });
+    }
+
+    function updateReviewCharHint() {
+      const len = document.getElementById('reviewTextInput').value.trim().length;
+      const hint = document.getElementById('reviewCharHint');
+      if (len >= 30) {
+        hint.innerHTML = `<strong style="color:#5eead4;">${len}자 — 보너스 +5 XP 달성!</strong>`;
+      } else {
+        hint.textContent = `${len} / 30자 (30자 이상 시 +5 XP 보너스!)`;
+      }
+    }
+
+    function submitRoundReview(e) {
+      e.preventDefault();
+      const card = state.cards.find(c => c.id === state.activeRound.selectedCardId);
+      if (!card) return;
+
+      const rating = Number(document.getElementById('reviewRatingVal').value) || 4;
+      const text = document.getElementById('reviewTextInput').value.trim();
+      const masteryEl = document.getElementById('confirmMasteryCheck');
+      const confirmMastery = masteryEl ? masteryEl.checked : false;
+
+      const prevLvl = getLevelInfo(getTotalXp()).level;
+      const prevCount = card.applyCount;
+      const prevStatus = card.status;
+
+      // 경험치: 적용 완료 10 + 난이도×5 + 후기 30자 이상이면 +5
+      const bonusXp = text.length >= 30 ? 5 : 0;
+      const xpEarned = 10 + (Number(card.difficulty) * 5) + bonusXp;
+
+      card.applyCount += 1;
+      card.reviews.push({
+        id: uid('rev'),
+        date: getLocalDateKey(),
+        timestamp: Date.now(),
+        rating,
+        text
+      });
+
+      // 상태 승급: 미사용 → 시도(1회) → 반복(3회), 숙달은 사용자 확정으로만
+      if (card.status === 'unused') card.status = 'tried';
+      if (card.status === 'tried' && card.applyCount >= 3) card.status = 'repeated';
+      if (prevStatus === 'repeated' && confirmMastery) card.status = 'mastered';
+
+      state.domainXp[card.domain] = (state.domainXp[card.domain] || 0) + xpEarned;
+
+      state.logs.push({
+        id: uid('log'),
+        dateKey: getLocalDateKey(),
+        timestamp: Date.now(),
+        chapterNumber: state.chapter.number,
+        cardId: card.id,
+        cardTitle: card.title,
+        domain: card.domain,
+        xpEarned,
+        rating,
+        prevStatus,
+        newStatus: card.status
+      });
+
+      const newLvl = getLevelInfo(getTotalXp()).level;
+
+      state.activeRound.lastSettlement = {
+        cardTitle: card.title,
+        domain: card.domain,
+        difficulty: card.difficulty,
+        xpEarned,
+        bonusXp,
+        prevCount,
+        newCount: card.applyCount,
+        prevStatus,
+        newStatus: card.status,
+        leveledUp: newLvl > prevLvl,
+        newLevel: newLvl
+      };
+      state.activeRound.step = 'settlement';
+
+      saveState();
+      renderApp();
+    }
+
+    function finishSettlementToHome() {
+      state.activeRound.step = 'idle';
+      state.activeRound.lastSettlement = null;
+      switchTab('home');
+    }
+
+    function startAnotherRound() {
+      state.activeRound.step = 'idle';
+      state.activeRound.lastSettlement = null;
+      saveState();
+      renderApp();
+    }
+
+    // --- CARD BOOK 액션 ---
+    function setCardbookView(view) {
+      state.ui.cardbookView = view;
+      saveState();
+      renderApp();
+    }
+    function setCardbookStatus(st) {
+      state.ui.cardbookStatus = st;
+      saveState();
+      renderApp();
+    }
+    function setCardbookDomain(dom) {
+      state.ui.cardbookDomain = dom;
+      saveState();
+      renderApp();
+    }
+    // 검색은 목록 영역만 갱신 (입력창을 다시 그리지 않아 한글 입력이 끊기지 않음)
+    function setCardbookSearch(q) {
+      state.ui.cardbookSearch = q;
+      const list = document.getElementById('cbList');
+      if (list) list.innerHTML = renderCardBookList();
+    }
+    function toggleCardBack(cardId) {
+      state.ui.expandedCardIds[cardId] = !state.ui.expandedCardIds[cardId];
+      renderApp();
+    }
+
+    function populateDomainSelect(selectId, selectedVal) {
+      const sel = document.getElementById(selectId);
+      sel.innerHTML = DOMAINS.map(d =>
+        `<option value="${d.name}" ${d.name === selectedVal ? 'selected' : ''}>${d.name} (${d.desc})</option>`
+      ).join('');
+    }
+
+    function openCardModal(cardId = null) {
+      const isEdit = !!cardId;
+      const card = isEdit ? state.cards.find(c => c.id === cardId) : null;
+
+      document.getElementById('cardFormTitle').textContent = isEdit ? '✏️ 스킬카드 수정' : '✨ 새 스킬카드 추가';
+      document.getElementById('cfId').value = card ? card.id : '';
+      document.getElementById('cfTitle').value = card ? card.title : '';
+      document.getElementById('cfAction').value = card ? card.action : '';
+      document.getElementById('cfCondition').value = card ? (card.condition || '') : '';
+      document.getElementById('cfDuration').value = card ? card.duration : 30;
+      document.getElementById('cfDifficulty').value = card ? card.difficulty : 2;
+      document.getElementById('cfSourceUrl').value = card ? (card.sourceUrl || '') : '';
+      document.getElementById('cfSummary').value = card ? (card.summary || '') : '';
+      populateDomainSelect('cfDomain', card ? card.domain : DOMAINS[0].name);
+
+      openModal('modalCardForm');
+    }
+
+    function saveCardForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('cfId').value;
+      const payload = {
+        title: document.getElementById('cfTitle').value.trim(),
+        action: document.getElementById('cfAction').value.trim(),
+        condition: document.getElementById('cfCondition').value.trim(),
+        domain: document.getElementById('cfDomain').value,
+        duration: Math.max(1, Number(document.getElementById('cfDuration').value) || 30),
+        difficulty: Math.max(1, Math.min(5, Number(document.getElementById('cfDifficulty').value) || 2)),
+        sourceUrl: document.getElementById('cfSourceUrl').value.trim(),
+        summary: document.getElementById('cfSummary').value.trim()
+      };
+
+      if (id) {
+        const card = state.cards.find(c => c.id === id);
+        if (card) Object.assign(card, payload);
+        showToast('카드가 수정되었습니다.');
+      } else {
+        state.cards.unshift({
+          id: uid('card'),
+          ...payload,
+          status: 'unused',
+          applyCount: 0,
+          reviews: [],
+          archived: false,
+          archiveReason: '',
+          createdAt: Date.now()
+        });
+        showToast('새 스킬카드가 추가되었습니다!');
+      }
+
+      saveState();
+      closeModal('modalCardForm');
+      renderApp();
+    }
+
+    function confirmMasteryFromBook(cardId) {
+      const card = state.cards.find(c => c.id === cardId);
+      if (!card || card.status !== 'repeated') return;
+      if (!confirm(`“${card.title}” 카드를 '숙달' 상태로 확정 승급할까요?`)) return;
+      card.status = 'mastered';
+      saveState();
+      showToast('👑 숙달 상태로 승급되었습니다!');
+      renderApp();
+    }
+
+    function openArchiveModal(cardId) {
+      document.getElementById('archiveCardId').value = cardId;
+      document.getElementById('archiveReasonInput').value = '';
+      openModal('modalArchive');
+    }
+
+    function confirmArchiveCard(e) {
+      e.preventDefault();
+      const cardId = document.getElementById('archiveCardId').value;
+      const reason = document.getElementById('archiveReasonInput').value.trim();
+      const card = state.cards.find(c => c.id === cardId);
+      if (card) {
+        card.archived = true;
+        card.archiveReason = reason;
+        if (state.activeRound.selectedCardId === cardId || state.activeRound.candidates.includes(cardId)) {
+          resetRoundState();
+        }
+        saveState();
+        showToast('카드를 보관함으로 이동했습니다.');
+      }
+      closeModal('modalArchive');
+      renderApp();
+    }
+
+    function restoreCard(cardId) {
+      const card = state.cards.find(c => c.id === cardId);
+      if (card) {
+        card.archived = false;
+        card.archiveReason = '';
+        saveState();
+        showToast('카드를 드로우 풀로 복원했습니다!');
+        renderApp();
+      }
+    }
+
+    function deleteCardPermanent(cardId) {
+      const card = state.cards.find(c => c.id === cardId);
+      if (!card) return;
+      if (!confirm(`“${card.title}” 카드를 영구 삭제할까요? (누적 경험치 기록은 유지됩니다)`)) return;
+      state.cards = state.cards.filter(c => c.id !== cardId);
+      if (state.activeRound.selectedCardId === cardId || state.activeRound.candidates.includes(cardId)) {
+        resetRoundState();
+      }
+      saveState();
+      showToast('카드가 삭제되었습니다.');
+      renderApp();
+    }
+
+    // --- CHAPTER 액션 ---
+    function getNextChapterRewardLabel(chNum) {
+      if (chNum === 1) return '드로우 후보 +1장 (3→4장) & 칭호 해금';
+      if (chNum === 2) return '라운드당 리롤 +1회 (1→2회) & 칭호 해금';
+      if (chNum === 5) return '드로우 후보 +1장 (4→5장) & 칭호 해금';
+      if (chNum === 6) return '라운드당 리롤 +1회 (2→3회) & 칭호 해금';
+      return '새 칭호 해금';
+    }
+
+    function saveRealReward() {
+      const val = document.getElementById('realRewardInput').value.trim();
+      state.chapter.realReward = val;
+      saveState();
+      showToast('현실 보상이 저장되었습니다.');
+      renderApp();
+    }
+
+    function equipTitle(title) {
+      state.chapter.equippedTitle = title;
+      saveState();
+      renderApp();
+    }
+
+    function selectSeasonTheme(domainName) {
+      if (!needsSeasonThemeSelection()) return;
+      state.chapter.seasonThemeDomain = domainName;
+      state.chapter.seasonThemeBlock = getCurrentSeasonBlock();
+      saveState();
+      showToast(`시즌 테마가 '${domainName}'(으)로 설정되었습니다!`);
+      renderApp();
+    }
+
+    function openSettleChapter() {
+      const ch = state.chapter;
+      const stats = getChapterStats(ch.number);
+
+      const rewardNotes = [];
+      if (stats.goalAchieved) {
+        if (ch.number === 1 && ch.drawCount < 4) rewardNotes.push('🃏 드로우 후보 3장 → 4장 확장!');
+        else if (ch.number === 5 && ch.drawCount < 5) rewardNotes.push('🃏 드로우 후보 4장 → 5장 확장!');
+
+        if (ch.number === 2 && ch.maxRerolls < 2) rewardNotes.push('🎲 리롤 횟수 1회 → 2회 증가!');
+        else if (ch.number === 6 && ch.maxRerolls < 3) rewardNotes.push('🎲 리롤 횟수 2회 → 3회 증가!');
+
+        const nextTitle = CHAPTER_TITLES[Math.min(CHAPTER_TITLES.length - 1, ch.number)];
+        if (nextTitle && !ch.unlockedTitles.includes(nextTitle)) {
+          rewardNotes.push(`🏅 새 칭호 획득: [${nextTitle}]`);
+        }
+      }
+
+      document.getElementById('modalSettlementBody').innerHTML = `
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+          <div class="grade-badge grade-${stats.grade}">${stats.grade}</div>
+          <div>
+            <h4 style="margin:0 0 4px; font-size:18px;">Chapter ${ch.number} 주간 정산</h4>
+            <div style="font-size:13px; color:var(--text-secondary);">
+              ${stats.rounds} / ${stats.targetRounds} 라운드 완료 · +${stats.xp} XP · 새로 시도 ${stats.newlyTriedCount}장 · 승급 ${stats.promotedCount}회
+            </div>
+          </div>
+        </div>
+
+        ${stats.goalAchieved ? `
+          <div style="background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.45); border-radius:12px; padding:12px; margin-bottom:14px;">
+            <strong style="color:#6ee7b7;">🎉 주간 목표 달성 보상</strong>
+            <ul style="margin:6px 0 0; padding-left:18px; font-size:13.5px;">
+              ${rewardNotes.length > 0 ? rewardNotes.map(n => `<li>${n}</li>`).join('') : '<li>꾸준한 성장 챕터 클리어 기록 누적!</li>'}
+              ${ch.realReward ? `<li>🗝️ 현실 보상 해금: <strong>${escapeHtml(ch.realReward)}</strong></li>` : ''}
+            </ul>
+          </div>
+        ` : `
+          <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:12px; padding:12px; margin-bottom:14px; font-size:13px; color:var(--text-secondary);">
+            아직 주간 목표(${stats.targetRounds}라운드)를 채우지 못했습니다. 지금 정산하면 보상 업그레이드 없이 다음 챕터로 넘어갑니다.
+          </div>
+        `}
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn" onclick="closeModal('modalSettlement')">더 플레이하기</button>
+          <button class="btn btn-primary" onclick="confirmAdvanceChapter()">정산 완료 & Chapter ${ch.number + 1} 시작</button>
+        </div>
+      `;
+      openModal('modalSettlement');
+    }
+
+    function confirmAdvanceChapter() {
+      const ch = state.chapter;
+      const stats = getChapterStats(ch.number);
+
+      ch.pastSettlements.push({
+        chapterNum: ch.number,
+        rounds: stats.rounds,
+        targetRounds: stats.targetRounds,
+        xp: stats.xp,
+        newlyTriedCount: stats.newlyTriedCount,
+        promotedCount: stats.promotedCount,
+        grade: stats.grade,
+        settledAt: getLocalDateKey()
+      });
+
+      if (stats.goalAchieved) {
+        if (ch.number === 1 && ch.drawCount < 4) ch.drawCount = 4;
+        else if (ch.number === 5 && ch.drawCount < 5) ch.drawCount = 5;
+
+        if (ch.number === 2 && ch.maxRerolls < 2) ch.maxRerolls = 2;
+        else if (ch.number === 6 && ch.maxRerolls < 3) ch.maxRerolls = 3;
+
+        const nextTitle = CHAPTER_TITLES[Math.min(CHAPTER_TITLES.length - 1, ch.number)];
+        if (nextTitle && !ch.unlockedTitles.includes(nextTitle)) {
+          ch.unlockedTitles.push(nextTitle);
+          ch.equippedTitle = nextTitle;
+        }
+      }
+
+      ch.number += 1;
+      ch.startDateKey = getLocalDateKey();
+      ch.realReward = '';
+
+      saveState();
+      closeModal('modalSettlement');
+      showToast(`Chapter ${ch.number}가 시작되었습니다!`);
+      renderApp();
+    }
+
+    // --- STRATEGY 액션 ---
+    function addStrategy(e) {
+      e.preventDefault();
+      state.strategies.unshift({
+        id: uid('str'),
+        title: document.getElementById('stTitle').value.trim(),
+        domain: document.getElementById('stDomain').value,
+        sourceUrl: document.getElementById('stUrl').value.trim(),
+        summary: document.getElementById('stSummary').value.trim(),
+        createdAt: Date.now()
+      });
+      saveState();
+      showToast('공략이 저장되었습니다!');
+      renderApp();
+    }
+
+    function deleteStrategy(id) {
+      if (!confirm('이 공략을 삭제할까요?')) return;
+      state.strategies = state.strategies.filter(s => s.id !== id);
+      saveState();
+      renderApp();
+    }
+
+    let convertingStrategyId = null;
+    let convertRowCounter = 0;
+
+    function openConvertStrategyModal(strategyId) {
+      const st = state.strategies.find(s => s.id === strategyId);
+      if (!st) return;
+      convertingStrategyId = strategyId;
+      convertRowCounter = 0;
+
+      document.getElementById('convertStrategyHeader').innerHTML = `
+        <div style="background:var(--bg-card); padding:12px; border-radius:12px; border:1px solid var(--border-subtle);">
+          <div style="font-size:12px; color:var(--text-secondary);">원본 공략 (${escapeHtml(st.domain)})</div>
+          <div style="font-weight:700; font-size:15px;">${escapeHtml(st.title)}</div>
+          ${st.sourceUrl ? `<div style="font-size:12px; color:var(--dom-world); margin-top:2px; word-break:break-all;">자동 연결 링크: ${escapeHtml(st.sourceUrl)}</div>` : ''}
+        </div>
+      `;
+
+      document.getElementById('convertCardRows').innerHTML = '';
+      addConvertRow(st.title);
+      openModal('modalConvertStrategy');
+    }
+
+    function addConvertRow(defaultTitle = '') {
+      const st = state.strategies.find(s => s.id === convertingStrategyId);
+      if (!st) return;
+      convertRowCounter += 1;
+      const idx = convertRowCounter;
+      defaultTitle = defaultTitle || st.title;
+      const container = document.getElementById('convertCardRows');
+      const div = document.createElement('div');
+      div.className = 'stat-box convert-row';
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:13px; color:#a5b4fc;">행동 카드 #${idx}</strong>
+          ${idx > 1 ? `<button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.convert-row').remove()">제거</button>` : ''}
+        </div>
+        <div class="grid-2" style="gap:8px; margin-bottom:8px;">
+          <input type="text" class="form-control cr-title" placeholder="카드 제목" value="${escapeHtml(defaultTitle ? defaultTitle + ' #' + idx : '')}" required />
+          <select class="form-control cr-domain">
+            ${DOMAINS.map(d => `<option value="${d.name}" ${d.name === st.domain ? 'selected' : ''}>${d.name}</option>`).join('')}
+          </select>
+        </div>
+        <input type="text" class="form-control cr-action" style="margin-bottom:8px;" placeholder="행동 (한 줄, 하나의 행동 단위) *" required />
+        <div class="grid-2" style="gap:8px;">
+          <input type="text" class="form-control cr-condition" placeholder="조건 (선택)" />
+          <div style="display:flex; gap:8px;">
+            <input type="number" class="form-control cr-duration" value="30" min="1" max="720" title="소요시간(분)" placeholder="분" />
+            <select class="form-control cr-difficulty" title="난이도">
+              <option value="1">★1</option>
+              <option value="2" selected>★2</option>
+              <option value="3">★3</option>
+              <option value="4">★4</option>
+              <option value="5">★5</option>
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    function submitConvertStrategy() {
+      const st = state.strategies.find(s => s.id === convertingStrategyId);
+      if (!st) return;
+      const rows = Array.from(document.querySelectorAll('#convertCardRows .convert-row'));
+      const newCards = [];
+
+      for (const row of rows) {
+        const title = row.querySelector('.cr-title').value.trim();
+        const action = row.querySelector('.cr-action').value.trim();
+        if (!title || !action) {
+          showToast('모든 카드의 제목과 행동을 입력해주세요.');
+          return;
+        }
+        newCards.push({
+          id: uid('card'),
+          title,
+          action,
+          condition: row.querySelector('.cr-condition').value.trim(),
+          duration: Math.max(1, Number(row.querySelector('.cr-duration').value) || 30),
+          domain: row.querySelector('.cr-domain').value,
+          difficulty: Number(row.querySelector('.cr-difficulty').value) || 2,
+          sourceUrl: st.sourceUrl || '',
+          summary: `[공략 변환: ${st.title}]\n${st.summary}`,
+          status: 'unused',
+          applyCount: 0,
+          reviews: [],
+          archived: false,
+          archiveReason: '',
+          createdAt: Date.now()
+        });
+      }
+
+      state.cards.unshift(...newCards);
+      saveState();
+      closeModal('modalConvertStrategy');
+      showToast(`${newCards.length}장의 스킬카드가 생성되었습니다! 카드북에서 확인하세요.`);
+    }
+
+    // --- SETTINGS / BACKUP 액션 ---
+    function exportData() {
+      const jsonStr = JSON.stringify(state, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `skilldeck-backup-${getLocalDateKey()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('JSON 백업 파일이 다운로드되었습니다.');
+    }
+
+    function importData() {
+      const input = document.getElementById('importFileInput');
+      const file = input.files && input.files[0];
+      if (!file) {
+        showToast('먼저 JSON 파일을 선택해주세요.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!parsed || !Array.isArray(parsed.cards) || typeof parsed.domainXp !== 'object') {
+            alert('유효한 스킬덱 백업 JSON 파일이 아닙니다.');
+            return;
+          }
+          if (!confirm('선택한 백업 데이터로 현재 데이터를 덮어쓸까요?')) return;
+          state = normalizeState(parsed);
+          saveState();
+          closeModal('modalSettings');
+          showToast('데이터가 성공적으로 복원되었습니다!');
+          renderApp();
+        } catch (err) {
+          alert('JSON 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetAllData() {
+      if (!confirm('정말 모든 카드, 기록, 챕터 데이터를 초기화할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+      state = createInitialState();
+      saveState();
+      closeModal('modalSettings');
+      showToast('초기 상태로 재설정되었습니다.');
+      renderApp();
+    }
+
+    // ==================== [10. JAVASCRIPT: INIT] ====================
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    document.getElementById('btnOpenSettings').addEventListener('click', () => {
+      openModal('modalSettings');
+    });
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) backdrop.classList.remove('open');
+      });
+    });
+
+    renderApp();
+  </script>
+</body>
+</html>
